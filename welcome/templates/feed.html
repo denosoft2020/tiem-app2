@@ -1,0 +1,137 @@
+{% include '_navbar.html' %}
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if active_tab == 'friends' %}Following | {% elif active_tab == 'live' %}Live | {% endif %}Feed</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'css/feed.css' %}">
+</head>
+<body>
+    <div class="feed-container">
+        <!-- Header Tabs -->
+        <div class="feed-tabs">
+            <a href="{% url 'feed' %}?tab=reel" class="tab-button {% if active_tab == 'reel' %}active{% endif %}">
+                <i class="fas fa-compass"></i> Reel
+            </a>
+            <a href="{% url 'feed' %}?tab=friends" class="tab-button {% if active_tab == 'friends' %}active{% endif %}">
+                <i class="fas fa-user-friends"></i> Following
+            </a>
+            <a href="{% url 'live' %}" class="tab-button {% if active_tab == 'live' %}active{% endif %}">
+                <img src="{% static 'img/logo_t.png' %}" alt="live" class="logo-icon" style="width: 15px; height: 15px;"> Live
+            </a>
+        </div>
+
+        <!-- Main Feed Content -->
+        <div class="video-feed">
+            {% for post in posts %}
+            <div class="video-container" data-post-id="{{ post.id }}">
+                <!-- Video/Image Content -->
+                <div class="video-wrapper">
+                    {% if post.video %}
+                    <video controls autoplay loop muted playsinline class="video-player">
+                        <source src="{{ post.video.url }}" type="video/mp4">
+                    </video>
+                    {% elif post.image %}
+                    <img src="{{ post.image.url }}" alt="Post" class="video-player">
+                    {% endif %}
+                </div>
+
+                <!-- Right Action Buttons -->
+                <div class="action-buttons">
+                    <!-- Profile Picture -->
+                    <div class="profile-action">
+                        <div class="profile-pic-container">
+                            <a href="{% url 'profile' post.user.username %}">
+                                {% if post.user.profile.image %}
+                                <img src="{{ post.user.profile.image.url }}" class="profile-pic" alt="@{{ post.user.username }}">
+                                {% else %}
+                                <div class="default-profile-pic">
+                                    {{ post.user.username|first|upper }}
+                                </div>
+                                {% endif %}
+                            </a>
+                            {% if post.user != request.user %}
+                            <div class="follow-indicator">
+                                {% if post.user in request.user.profile.following.all %}
+                                <i class="fas fa-check-circle followed"></i>
+                                {% else %}
+                                <i class="fas fa-plus-circle not-followed"></i>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Like Button -->
+                    <button class="action-button like-button" data-post-id="{{ post.id }}">
+                        <i class="{% if request.user in post.likes.all %}fas{% else %}far{% endif %} fa-heart"></i>
+                        <span class="action-count">{{ post.likes.count }}</span>
+                    </button>
+
+                    <!-- Comment Button -->
+                    <button class="action-button comment-button">
+                        <i class="far fa-comment-dots"></i>
+                        <span class="action-count">{{ post.comments.count }}</span>
+                    </button>
+
+                    <!-- Share Button -->
+                    <button class="action-button share-button">
+                        <i class="fas fa-share"></i>
+                    </button>
+
+                    <!-- Download Button -->
+                    {% if post.video %}
+                    <a href="{{ post.video.url }}?download=1" class="action-button download-button">
+                        <i class="fas fa-download"></i>
+                    </a>
+                    {% endif %}
+                </div>
+
+                <!-- Video Info -->
+                <div class="video-info">
+                    <div class="user-info">
+                        <a href="{% url 'profile' post.user.username %}" class="username">@{{ post.user.username }}</a>
+                        {% if post.user != request.user %}
+                        <button class="follow-btn {% if post.user in request.user.profile.following.all %}following{% endif %}" 
+                                data-user-id="{{ post.user.id }}">
+                            {% if post.user in request.user.profile.following.all %}
+                            Following
+                            {% else %}
+                            Follow
+                            {% endif %}
+                        </button>
+                        {% endif %}
+                    </div>
+                    <p class="video-caption">{{ post.caption }}</p>
+                    <div class="video-meta">
+                        <span class="view-count"><i class="fas fa-eye"></i> {{ post.views }} views</span>
+                        <span class="post-time">{{ post.created_at|timesince }} ago</span>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="empty-feed">
+                <i class="fas fa-video-slash"></i>
+                <h3>No videos found</h3>
+                {% if active_tab == 'friends' %}
+                <p>Follow more users to see their content</p>
+                {% else %}
+                <p>Be the first to upload a video</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Django CSRF Token for AJAX -->
+    <script>
+        const CSRF_TOKEN = "{{ csrf_token }}";
+        const CURRENT_USER = "{{ request.user.username }}";
+    </script>
+    
+    <script src="{% static 'js/feed.js' %}"></script>
+</body>
+</html>

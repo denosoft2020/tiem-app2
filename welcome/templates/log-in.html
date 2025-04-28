@@ -1,0 +1,31 @@
+{%load static%}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <link rel="shortcut icon" type="image/png" href="{%static 'img/logo_t.png' %}">
+    <link rel="stylesheet" href="{%static 'css/log-in.css' %}">
+    <!--script-- defer src="{%static 'js/log-in.js' %}"></script-->
+</head>
+<body>
+    <div class="login-container">
+        <img src="{%static 'img/logo.png' %}" alt="App Logo" class="logo">
+        <header>
+            <h2>Login</h2>
+        </header>
+        {% if form.errors %}
+        <p style="color: red;">Invalid username or password.</p>
+        {% endif %}
+
+        <form id="loginForm" method="POST" action="{% url 'login' %}">
+            {% csrf_token %}
+            {{ form.as_p }} 
+            <button type="submit">Login</button>
+        </form>
+        <p id="login-message"></p>
+        <a href="{% url 'forgot_password' %}" class="forgot-password">Forgot password?</a>
+    </div>
+</body>
+</html>

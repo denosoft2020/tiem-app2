@@ -1,0 +1,36 @@
+{% include '_navbar.html' %}
+{%load static%}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Friends</title>
+    <link rel="stylesheet" href="friends.css">
+    <script defer src="friends.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h2>People You May Know</h2>
+        </header>
+        <main>
+            <div class="suggested-friends" id="suggestedFriends">
+                <p class="placeholder">Loading friend suggestions...</p>
+            </div>
+            <div class="friends-posts" id="friendsPosts">
+                <h3>Friends' Posts</h3>
+                <p class="placeholder">Loading posts...</p>
+            </div>
+        </main>
+        
+        <nav class="bottom-nav">
+            <button onclick="window.location.href='feed.html'">🏠 </button>
+            <button onclick="window.location.href='friends.html'" class="active">👥 Friends</button>
+            <button onclick="window.location.href='upload.html'">➕ </button>
+            <button onclick="window.location.href='notifications.html'">🔔 </button>
+            <button onclick="window.location.href='profile.html'">👤 </button>
+        </nav>
+    </div>
+</body>
+</html>

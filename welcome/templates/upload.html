@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Upload Post</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #0095f6;
+            --secondary: #efefef;
+            --text: #262626;
+            --text-light: #8e8e8e;
+            --border: #dbdbdb;
+            --background: #fafafa;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: var(--background);
+            color: var(--text);
+            line-height: 1.5;
+            touch-action: manipulation;
+        }
+        
+        .upload-container {
+            max-width: 100%;
+            background: white;
+            min-height: 100vh;
+            position: relative;
+        }
+        
+        .upload-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            background: white;
+            z-index: 100;
+        }
+        
+        .upload-header h2 {
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        .btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+        }
+        
+        .btn-primary {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .upload-options {
+            display: flex;
+            gap: 12px;
+            padding: 20px;
+            flex-direction: column;
+        }
+        
+        .option-card {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 24px 12px;
+            text-align: center;
+            transition: all 0.2s ease;
+            background: white;
+        }
+        
+        .option-card:active {
+            transform: scale(0.98);
+        }
+        
+        .option-card.active {
+            border-color: var(--primary);
+            background: rgba(0, 149, 246, 0.05);
+        }
+        
+        .option-card i {
+            font-size: 32px;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+        
+        .option-card h3 {
+            font-size: 16px;
+            margin-bottom: 4px;
+        }
+        
+        .option-card p {
+            font-size: 13px;
+            color: var(--text-light);
+        }
+        
+        .preview-container {
+            width: 100%;
+            aspect-ratio: 9/16;
+            background: var(--background);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .preview-media {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .empty-state {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: var(--text-light);
+        }
+        
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 12px;
+            opacity: 0.7;
+        }
+        
+        .form-section {
+            padding: 16px;
+        }
+        
+        .form-group {
+            margin-bottom: 16px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        textarea, select, input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 14px;
+        }
+        
+        textarea {
+            min-height: 100px;
+            resize: none;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .form-row .form-group {
+            flex: 1;
+        }
+        
+        .media-controls {
+            position: absolute;
+            bottom: 16px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            z-index: 10;
+        }
+        
+        .media-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            display: none;
+        }
+        
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            z-index: 1000;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="upload-container">
+        <div class="upload-header">
+            <button class="btn" id="back-btn">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <h2>Create New Post</h2>
+            <button type="submit" form="upload-form" class="btn btn-primary" id="share-btn">Share</button>
+        </div>
+        
+        <form id="upload-form" method="post" enctype="multipart/form-data">
+            <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+            
+            <div class="upload-options">
+                <div class="option-card" id="camera-option">
+                    <i class="fas fa-camera"></i>
+                    <h3>Take Photo/Video</h3>
+                    <p>Use your camera to capture new content</p>
+                </div>
+                
+                <div class="option-card" id="gallery-option">
+                    <i class="fas fa-images"></i>
+                    <h3>Choose from Gallery</h3>
+                    <p>Select existing photos or videos</p>
+                </div>
+            </div>
+            
+            <div class="preview-container" id="preview-container">
+                <div class="empty-state">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>No media selected</p>
+                </div>
+            </div>
+            
+            <div class="form-section">
+                <div class="form-group">
+                    <label for="caption">Caption</label>
+                    <textarea id="caption" name="caption" placeholder="Write a caption..."></textarea>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="filter">Filter</label>
+                        <select id="filter" name="filter_effect">
+                            <option value="">No Filter</option>
+                            <option value="clarendon">Clarendon</option>
+                            <option value="juno">Juno</option>
+                            <option value="lark">Lark</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="duration">Duration (sec)</label>
+                        <input type="number" id="duration" name="duration" min="1" max="60" value="15">
+                    </div>
+                </div>
+            </div>
+        </form>
+        
+        <div class="toast" id="toast"></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Elements
+            const form = document.getElementById('upload-form');
+            const previewContainer = document.getElementById('preview-container');
+            const emptyState = previewContainer.querySelector('.empty-state');
+            const cameraOption = document.getElementById('camera-option');
+            const galleryOption = document.getElementById('gallery-option');
+            const backBtn = document.getElementById('back-btn');
+            const shareBtn = document.getElementById('share-btn');
+            const toast = document.getElementById('toast');
+            
+            // Create file input
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.name = 'media_file';
+            fileInput.accept = 'image/*,video/*';
+            fileInput.style.display = 'none';
+            document.body.appendChild(fileInput);
+            
+            // Create loading overlay
+            const loadingOverlay = document.createElement('div');
+            loadingOverlay.className = 'loading-overlay';
+            loadingOverlay.innerHTML = '<div class="spinner"></div>';
+            previewContainer.appendChild(loadingOverlay);
+            
+            // Media variables
+            let currentMediaElement = null;
+            let currentMediaType = null;
+            
+            // Back button
+            backBtn.addEventListener('click', function() {
+                window.history.back();
+            });
+            
+            // Camera option
+            cameraOption.addEventListener('click', function() {
+                // Highlight selection
+                cameraOption.classList.add('active');
+                galleryOption.classList.remove('active');
+                
+                // Set up file input for camera
+                fileInput.value = ''; // Clear previous selection
+                fileInput.setAttribute('capture', 'environment');
+                fileInput.accept = 'image/*,video/*';
+                fileInput.click();
+            });
+            
+            // Gallery option
+            galleryOption.addEventListener('click', function() {
+                // Highlight selection
+                galleryOption.classList.add('active');
+                cameraOption.classList.remove('active');
+                
+                // Set up file input for gallery
+                fileInput.value = ''; // Clear previous selection
+                fileInput.removeAttribute('capture');
+                fileInput.accept = 'image/*,video/*';
+                fileInput.click();
+            });
+            
+            // Handle file selection
+            fileInput.addEventListener('change', function(e) {
+                if (!this.files || this.files.length === 0) return;
+                
+                const file = this.files[0];
+                showLoading();
+                
+                // Clear previous preview if exists
+                if (currentMediaElement) {
+                    URL.revokeObjectURL(currentMediaElement.src);
+                    previewContainer.removeChild(currentMediaElement);
+                }
+                
+                // Determine media type
+                currentMediaType = file.type.startsWith('image/') ? 'image' : 
+                                  file.type.startsWith('video/') ? 'video' : null;
+                
+                if (!currentMediaType) {
+                    showToast('Unsupported file type');
+                    hideLoading();
+                    return;
+                }
+                
+                // Create media element
+                currentMediaElement = document.createElement(currentMediaType);
+                currentMediaElement.className = 'preview-media';
+                
+                // Handle load events
+                currentMediaElement.onloadeddata = currentMediaElement.onload = function() {
+                    hideLoading();
+                    emptyState.style.display = 'none';
+                };
+                
+                currentMediaElement.onerror = function() {
+                    hideLoading();
+                    showToast('Error loading media');
+                };
+                
+                // Add video controls
+                if (currentMediaType === 'video') {
+                    currentMediaElement.controls = true;
+                    
+                    const controls = document.createElement('div');
+                    controls.className = 'media-controls';
+                    controls.innerHTML = `
+                        <button class="media-btn" onclick="this.parentNode.parentNode.querySelector('video').play()">
+                            <i class="fas fa-play"></i>
+                        </button>
+                        <button class="media-btn" onclick="this.parentNode.parentNode.querySelector('video').pause()">
+                            <i class="fas fa-pause"></i>
+                        </button>
+                    `;
+                    previewContainer.appendChild(controls);
+                }
+                
+                // Display the media
+                currentMediaElement.src = URL.createObjectURL(file);
+                previewContainer.insertBefore(currentMediaElement, emptyState);
+            });
+            
+            // Form submission
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                if (!fileInput.files || fileInput.files.length === 0) {
+                    showToast('Please select a photo or video first');
+                    return;
+                }
+                
+                showLoading();
+                
+                const formData = new FormData(form);
+                
+                fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error('Network error');
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        window.location.href = data.redirect_url || '/feed/';
+                    } else {
+                        throw new Error(data.message || 'Upload failed');
+                    }
+                })
+                .catch(error => {
+                    hideLoading();
+                    showToast(error.message || 'An error occurred');
+                    console.error('Upload error:', error);
+                });
+            });
+            
+            // Helper functions
+            function showLoading() {
+                loadingOverlay.style.display = 'flex';
+                shareBtn.disabled = true;
+            }
+            
+            function hideLoading() {
+                loadingOverlay.style.display = 'none';
+                shareBtn.disabled = false;
+            }
+            
+            function showToast(message) {
+                toast.textContent = message;
+                toast.style.display = 'block';
+                setTimeout(() => {
+                    toast.style.display = 'none';
+                }, 3000);
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,37 @@
+{%load static%}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to TIEM</title>
+    <link rel="shortcut icon" type="image/png" href="{%static 'img/logo_t.png' %}">
+    <link rel="stylesheet" href="{%static 'css/welcome.css' %}">
+    <script defer src="{%static 'js/welcome.js' %}"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <img src="{%static 'img/logo.png' %}" alt="App Logo" class="logo">
+        </header>
+        <main>
+            <h1>Welcome to Our TIEM</h1>
+            <p>Join the community and explore amazing content.</p>
+            <div class="auth-buttons">
+                <a href="{% url 'signin' %}">
+                    <button class="create-account-btn" id="createAccount">Create Account</button>
+                </a>
+                <a href="/auth/google/" class="google-btn">
+                    <img src="{%static 'img/google-icon.png' %}" alt="Google"> Google
+                </a>
+                
+                <a href="/auth/facebook/" class="facebook-btn">
+                    <img src="{%static 'img/Facebook-icon.png' %}" alt="Facebook"> Facebook
+                </a>
+                
+            </div>
+            <a href="{% url 'login' %}" class="log-in-link">Already have an account? Sign in</a>
+        </main>
+    </div>
+</body>
+</html>

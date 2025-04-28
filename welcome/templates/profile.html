@@ -1,0 +1,127 @@
+{% include '_navbar.html' %}
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@{{ user.username }} | Tiem</title>
+    <link rel="stylesheet" href="{% static 'css/profile.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="profile-container">
+        <!-- Profile Header -->
+        <div class="profile-header">
+            <div class="profile-pic-container">
+                <img src="{{ profile.profile_picture.url }}" alt="Profile Picture" class="profile-pic">
+                <button class="change-pic-btn" onclick="document.getElementById('profile-pic-input').click()">
+                    <i class="fas fa-camera"></i>
+                </button>
+                <input type="file" id="profile-pic-input" accept="image/*" style="display: none;">
+            </div>
+            
+            <div class="profile-stats">
+                <div class="stat">
+                    <span class="stat-number">{{ posts_count }}</span>
+                    <span class="stat-label">Posts</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-number">{{ followers_count }}</span>
+                    <span class="stat-label">Followers</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-number">{{ following_count }}</span>
+                    <span class="stat-label">Following</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-number">{{ likes_count }}</span>
+                    <span class="stat-label">Likes</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Profile Info -->
+        <div class="profile-info">
+            <h1 class="display-name">{{ user.get_full_name }}</h1>
+            <h2 class="username">@{{ user.username }}</h2>
+            
+            <p class="bio">{{ profile.bio }}</p>
+            
+            <div class="profile-actions">
+                <button class="edit-profile-btn" onclick="window.location.href='{% url 'edit-profile' %}'">
+                    Edit Profile
+                </button>
+                <button class="share-profile-btn">
+                    <i class="fas fa-share-alt"></i>
+                </button>
+            </div>
+            
+            <div class="profile-links">
+                {% if profile.website %}
+                <a href="{{ profile.website }}" target="_blank" class="website-link">
+                    <i class="fas fa-link"></i> {{ profile.website }}
+                </a>
+                {% endif %}
+                {% if profile and profile.instagram %}
+                <a href="https://instagram.com/{{ profile.instagram }}" target="_blank" class="instagram-link">
+                    <i class="fab fa-instagram"></i> {{ profile.instagram }}
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Promo Section -->
+        <div class="promo-section">
+            <h3>Fly with me</h3>
+            <p>Post photos and Videos to get more views.</p>
+            <button class="join-btn">Join</button>
+        </div>
+        
+        <!-- Pinned Posts -->
+        {% if pinned_posts %}
+        <div class="pinned-section">
+            <h3 class="section-title">Pinned</h3>
+            {% for post in pinned_posts %}
+            <div class="pinned-post">
+                <p>{{ post.caption }}</p>
+                <div class="post-stats">
+                    <span><i class="fas fa-heart"></i> {{ post.likes_count }}</span>
+                    <span><i class="fas fa-comment"></i> {{ post.comments.count }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        <!-- Posts Grid -->
+        <div class="posts-grid">
+            {% for post in posts %}
+            <div class="post-item">
+                {% if post.image %}
+                <img src="{{ post.image.url }}" alt="Post Image">
+                {% elif post.video %}
+                <video controls>
+                    <source src="{{ post.video.url }}" type="video/mp4">
+                </video>
+                {% endif %}
+                <div class="post-overlay">
+                    <span><i class="fas fa-heart"></i> {{ post.likes_count }}</span>
+                    <span><i class="fas fa-comment"></i> {{ post.comments.count }}</span>
+                </div>
+            </div>
+            {% empty %}
+            <div class="no-posts">
+                <i class="fas fa-camera"></i>
+                <p>No posts yet</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- Bottom Navigation -->
+   
+
+    <script src="{% static 'js/profile.js' %}"></script>
+</body>
+</html>

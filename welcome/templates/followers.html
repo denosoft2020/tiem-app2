@@ -1,0 +1,18 @@
+<!-- followers.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Followers of @{{ profile.user.username }}</h2>
+<ul>
+    {% for follower in followers %}
+    <li>
+        <img src="{{ follower.profile_picture.url }}" width="50">
+        <a href="{% url 'profile' follower.user.username %}">
+            @{{ follower.user.username }}
+        </a>
+    </li>
+    {% empty %}
+    <li>No followers yet</li>
+    {% endfor %}
+</ul>
+{% endblock %}

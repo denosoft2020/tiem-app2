@@ -1,0 +1,375 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="live-container">
+    <!-- Go Live Section -->
+    <div class="go-live-section">
+        <div class="stream-preview">
+            <video id="localStream" class="preview-video" muted autoplay playsinline></video>
+            <div class="stream-controls">
+                <button id="startStreamBtn" class="live-button">
+                    <i class="fas fa-broadcast-tower"></i> Go Live
+                </button>
+                <div class="stream-settings">
+                    <input type="text" id="streamTitle" placeholder="Add stream title..." maxlength="80">
+                    <select id="streamQuality">
+                        <option value="720">720p</option>
+                        <option value="480">480p</option>
+                        <option value="360">360p</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Live Streams -->
+    <h2 class="live-streams-heading">Live Now</h2>
+    <div class="live-streams-grid">
+        {% for stream in live_streams %}
+        <div class="live-stream-card" data-stream-id="{{ stream.id }}">
+            <a href="{% url 'watch_live' stream.id %}" class="stream-link">
+                <div class="stream-thumbnail">
+                    <img src="{{ stream.user.profile.image.url }}" alt="{{ stream.user.username }}" class="stream-preview-img">
+                    <div class="live-badge">
+                        <span class="red-dot"></span> LIVE
+                    </div>
+                    <div class="stream-viewers">
+                        <i class="fas fa-eye"></i> {{ stream.viewers }}
+                    </div>
+                </div>
+                <div class="stream-info">
+                    <div class="streamer-info">
+                        <img src="{{ stream.user.profile.image.url }}" alt="{{ stream.user.username }}" class="streamer-avatar">
+                        <span class="streamer-name">@{{ stream.user.username }}</span>
+                    </div>
+                    <p class="stream-title">{{ stream.title }}</p>
+                </div>
+            </a>
+        </div>
+        {% empty %}
+        <div class="no-live-streams">
+            <i class="fas fa-broadcast-tower"></i>
+            <p>No live streams currently</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Stream End Modal -->
+<div id="endStreamModal" class="modal">
+    <div class="modal-content">
+        <h3>End Stream</h3>
+        <p>Are you sure you want to end the stream?</p>
+        <div class="modal-actions">
+            <button id="confirmEndStream" class="danger-button">End Stream</button>
+            <button id="cancelEndStream" class="secondary-button">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const LIVE_API_KEY = "YOUR_AGORA_APP_ID"; // Replace with your Agora app ID
+let localStream;
+let rtcClient;
+let isLive = false;
+
+// Initialize stream preview
+async function initializeStream() {
+    try {
+        localStream = await navigator.mediaDevices.getUserMedia({
+            video: { width: 1280, height: 720 },
+            audio: true
+        });
+        document.getElementById('localStream').srcObject = localStream;
+    } catch (error) {
+        console.error('Error accessing media devices:', error);
+    }
+}
+
+// Start live stream
+document.getElementById('startStreamBtn').addEventListener('click', async () => {
+    if (!isLive) {
+        const streamTitle = document.getElementById('streamTitle').value || "My Live Stream";
+        const quality = document.getElementById('streamQuality').value;
+        
+        try {
+            // Create live stream in Django backend
+            const response = await fetch('/api/create_stream/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({
+                    title: streamTitle,
+                    quality: quality
+                })
+            });
+            
+            const data = await response.json();
+            if (data.success) {
+                // Initialize Agora client
+                rtcClient = AgoraRTC.createClient({ mode: 'live', codec: 'h264' });
+                await rtcClient.join(LIVE_API_KEY, data.channel_name, data.token, '{{ request.user.id }}');
+                
+                // Publish local stream
+                await rtcClient.publish(localStream);
+                isLive = true;
+                document.getElementById('startStreamBtn').innerHTML = '<i class="fas fa-stop"></i> End Stream';
+            }
+        } catch (error) {
+            console.error('Error starting stream:', error);
+        }
+    } else {
+        document.getElementById('endStreamModal').style.display = 'block';
+    }
+});
+
+// End stream confirmation
+document.getElementById('confirmEndStream').addEventListener('click', async () => {
+    try {
+        await rtcClient.leave();
+        localStream.getTracks().forEach(track => track.stop());
+        await fetch(`/api/end_stream/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        });
+        isLive = false;
+        document.getElementById('endStreamModal').style.display = 'none';
+        window.location.reload();
+    } catch (error) {
+        console.error('Error ending stream:', error);
+    }
+});
+
+// Initialize on load
+window.onload = initializeStream;
+</script>
+
+<style>
+.live-container {
+    max-width: 1200px;
+    margin: 20px auto;
+    padding: 20px;
+}
+
+.go-live-section {
+    background: #1a1a1a;
+    border-radius: 12px;
+    margin-bottom: 30px;
+    padding: 20px;
+}
+
+.stream-preview {
+    position: relative;
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.preview-video {
+    width: 100%;
+    border-radius: 8px;
+    aspect-ratio: 16/9;
+    background: #000;
+}
+
+.stream-controls {
+    margin-top: 20px;
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.live-button {
+    background: #ff0000;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 25px;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s;
+}
+
+.live-button:hover {
+    background: #cc0000;
+    transform: scale(1.05);
+}
+
+.stream-settings {
+    display: flex;
+    gap: 10px;
+    flex-grow: 1;
+}
+
+#streamTitle {
+    flex: 2;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #333;
+    background: #2a2a2a;
+    color: white;
+}
+
+#streamQuality {
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #333;
+    background: #2a2a2a;
+    color: white;
+}
+
+.live-streams-heading {
+    color: white;
+    margin: 30px 0;
+    font-size: 24px;
+}
+
+.live-streams-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.live-stream-card {
+    background: #2a2a2a;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: transform 0.3s;
+}
+
+.live-stream-card:hover {
+    transform: translateY(-5px);
+}
+
+.stream-thumbnail {
+    position: relative;
+    aspect-ratio: 16/9;
+}
+
+.stream-preview-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.live-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: #ff0000;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+}
+
+.red-dot {
+    width: 8px;
+    height: 8px;
+    background: white;
+    border-radius: 50%;
+}
+
+.stream-viewers {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 14px;
+}
+
+.stream-info {
+    padding: 15px;
+}
+
+.streamer-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.streamer-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.streamer-name {
+    color: white;
+    font-weight: 600;
+}
+
+.stream-title {
+    color: #ccc;
+    font-size: 14px;
+    margin: 0;
+}
+
+.no-live-streams {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background: #2a2a2a;
+    padding: 30px;
+    border-radius: 12px;
+    text-align: center;
+    max-width: 400px;
+}
+
+.modal-actions {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.danger-button {
+    background: #ff0000;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.secondary-button {
+    background: #444;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+}
+</style>
+{% endblock %}

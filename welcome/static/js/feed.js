@@ -110,6 +110,26 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    let lastScrollTop = 0;
+const feedTabs = document.querySelector('.feed-tabs');
+
+window.addEventListener('scroll', function () {
+    let scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+
+    if (scrollTop > lastScrollTop) {
+        // Scrolling down
+        feedTabs.style.transform = 'translate(-50%, -80px)';
+        feedTabs.style.opacity = '0';
+    } else {
+        // Scrolling up
+        feedTabs.style.transform = 'translate(-50%, 0)';
+        feedTabs.style.opacity = '1';
+    }
+
+    lastScrollTop = scrollTop <= 0 ? 0 : scrollTop;
+});
+
+
     // Share functionality
     document.querySelectorAll('.share-button').forEach(button => {
         button.addEventListener('click', function() {

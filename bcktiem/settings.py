@@ -28,7 +28,7 @@ SECRET_KEY = 'django-insecure-03r@#3+qld7&+7vqdj&ndlxe3p6%6vvpn49%f$eu7&jgj%ho@u
 DEBUG = True
 
 ALLOWED_HOSTS = ['*']
-CSRF_TRUSTED_ORIGINS = ['https://57b9-94-205-52-58.ngrok-free.app']
+CSRF_TRUSTED_ORIGINS = ['https://4c71-87-200-149-202.ngrok-free.app']
 
 
 
@@ -54,8 +54,11 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.SessionAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticated',
-    )
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+    ),
+     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10
+
 }
 
 MIDDLEWARE = [
@@ -172,5 +175,13 @@ ASGI_APPLICATION = 'bcktiem.asgi.application'
 CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels.layers.InMemoryChannelLayer'
+    }
+}
+
+# Enable for better performance
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
     }
 }

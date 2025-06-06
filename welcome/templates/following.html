@@ -3,16 +3,16 @@
 
 {% block content %}
 <h2>@{{ profile.user.username }} is Following</h2>
-<ul>
+<ul>ul
     {% for followed in following %}
-    <li>
-        <img src="{{ followed.profile_picture.url }}" width="50">
-        <a href="{% url 'profile' followed.user.username %}">
-            @{{ followed.user.username }}
-        </a>
-    </li>
+        <li>
+            <img src="{{ followed.profile_picture.url }}" width="50">
+            <a href="{% url 'profile' followed.user.username %}">
+                @{{ followed.user.username }}
+            </a>
+        </li>
     {% empty %}
-    <li>Not following anyone yet</li>
+        <li>Not following anyone yet</li>
     {% endfor %}
 </ul>
 {% endblock %}

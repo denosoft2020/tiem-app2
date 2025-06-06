@@ -1,3 +1,4 @@
+from decimal import ROUND_HALF_EVEN
 from django.shortcuts import render, redirect,  get_object_or_404
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login
@@ -8,12 +9,15 @@ from django.http import JsonResponse
 import json
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
-from .models import Profile, Post, Notification, Conversation, Message, LiveStream
-from .forms import ProfileUpdateForm, PostForm, ProfilePictureForm
+from .models import Profile, Post, Notification, Conversation, Message, LiveStream, UserInteraction, Hashtag, Like, Comment
+from .forms import ProfileUpdateForm, ProfilePictureForm
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.cache import cache_page
 from django.db import models
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.conf import settings
 import os
 import uuid
@@ -22,10 +26,20 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 from rest_framework.renderers import JSONRenderer, TemplateHTMLRenderer
 from rest_framework.views import APIView
+from rest_framework.decorators import api_view, action
 from .serializers import NotificationSerializer, ConversationSerializer, MessageSerializer
 from django.contrib.auth import get_user_model
 from django.db.models import Q
 from agora_token_builder import RtcTokenBuilder
+from .serializers import (
+    PostSerializer, 
+    LikeSerializer, 
+    CommentSerializer, 
+    ProfileSerializer,
+    UserSerializer
+)
+from .utils import get_feed_posts
+import re
 #from agora_token_builder.RtcTokenBuilder import Role
 
 
@@ -75,49 +89,86 @@ def forgot_password(request):
 
 
 @login_required
+@login_required
 def profile_view(request, username):
     user = get_object_or_404(User, username=username)
-    profile, created = Profile.objects.get_or_create(user=user)
+    profile = get_object_or_404(Profile, user=user)
+    
+    # Handle default profile picture
     if not profile.profile_picture:
-        profile.profile_picture = 'profile_pictures/default.png'
+        profile.profile_picture = 'profile_pictures/default_profile.jpg'
         profile.save()
-    
-    
-    try:
-        profile = Profile.objects.get(user=user)
-    except Profile.DoesNotExist:
-        profile = Profile.objects.create(user=user)
-    
-    # Check if the current user is following this profile
-    is_following = False
-    if request.user.is_authenticated and request.user != user:
-        is_following = request.user.profile.following.filter(pk=profile.pk).exists()
     
     # Get user posts
     posts = Post.objects.filter(user=user).order_by('-created_at')
-    posts_count = posts.count()
-    
-    # Separate videos from images
-    videos = posts.filter(video__isnull=False)
-    images = posts.filter(image__isnull=False)
-    
-    # Get saved posts if viewing own profile
-    saved_posts = []
-    if request.user == user:
-        saved_posts = request.user.saved_posts.all()
     
     context = {
         'user': user,
         'profile': profile,
-        'posts_count': Post.objects.filter(user=user).count(),
-        'followers_count': profile.followers.count(),
-        'following_count': profile.following.count(),
-        'likes_count': sum(post.likes.count() for post in Post.objects.filter(user=user)),
-        'posts': Post.objects.filter(user=user).order_by('-created_at')[:9],
-        'pinned_posts': Post.objects.filter(user=user, is_pinned=True),
+        'posts_count': posts.count(),
+        'followers_count': profile.followed_by.count(),
+        'following_count': profile.follows.count(),
+        'likes_count': Like.objects.filter(post__user=user).count(),
+        'posts': posts[:12],  # Limit to 12 posts
     }
     
     return render(request, 'profile.html', context)
+
+
+@api_view(['POST'])
+@login_required
+def api_follow_user(request, user_id):
+    user_to_follow = get_object_or_404(User, id=user_id)
+    profile = request.user.profile
+    profile_to_follow = user_to_follow.profile
+    
+    if request.user == user_to_follow:
+        return Response({'error': 'Cannot follow yourself'}, status=400)
+    
+    data = request.data
+    action = data.get('action', 'follow')
+    
+    if action == 'follow':
+        profile.follows.add(profile_to_follow)
+    else:
+        profile.follows.remove(profile_to_follow)
+    
+    return Response({
+        'isFollowing': action == 'follow',
+        'followers_count': profile_to_follow.followed_by.count()
+    })
+
+class ProfileViewSet(viewsets.ModelViewSet):
+    queryset = Profile.objects.all()
+    serializer_class = ProfileSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    @action(detail=True, methods=['post'])
+    def follow(self, request, pk=None):
+        profile = self.get_object()
+        user_profile = request.user.profile
+        
+        if user_profile == profile:
+            return Response(
+                {"error": "Cannot follow yourself"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if user_profile.following.filter(id=profile.id).exists():
+            user_profile.following.remove(profile)
+            action = 'unfollow'
+        else:
+            user_profile.following.add(profile)
+            action = 'follow'
+            
+            # Record interaction
+            UserInteraction.objects.create(
+                user=request.user,
+                target_user=profile.user,
+                interaction_type='follow'
+            )
+        
+        return Response({"action": action}, status=status.HTTP_200_OK)
 
 @login_required
 @require_POST
@@ -219,46 +270,174 @@ def edit_profile(request):
     
     return render(request, 'edit_profile.html', {'form': form})
 
+class PostViewSet(viewsets.ModelViewSet):
+    queryset = Post.objects.all()
+    serializer_class = PostSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def perform_create(self, serializer):
+        post = serializer.save(user=self.request.user)
+        
+        # Process hashtags
+        hashtags = re.findall(r"#(\w+)", post.caption)
+        for tag in hashtags:
+            hashtag, created = Hashtag.objects.get_or_create(name=tag.lower())
+            hashtag.count += 1
+            hashtag.save()
+            post.hashtags.add(hashtag)
+        
+        # Process mentions
+        mentions = re.findall(r"@(\w+)", post.caption)
+        for username in mentions:
+            try:
+                user = User.objects.get(username=username)
+                post.mentions.add(user)
+            except User.DoesNotExist:
+                pass
+
+    @action(detail=True, methods=['post'])
+    def like(self, request, pk=None):
+        post = self.get_object()
+        like, created = Like.objects.get_or_create(
+            user=request.user, 
+            post=post
+        )
+        
+        if not created:
+            like.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        
+        # Record interaction
+        UserInteraction.objects.create(
+            user=request.user,
+            post=post,
+            interaction_type='like'
+        )
+        return Response(status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['post'])
+    def increment_views(self, request, pk=None):
+        post = self.get_object()
+        post.views += 1
+        post.save()
+        
+        # Record interaction
+        UserInteraction.objects.create(
+            user=request.user,
+            post=post,
+            interaction_type='view'
+        )
+        return Response(status=status.HTTP_200_OK)
     
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
+class CommentViewSet(viewsets.ModelViewSet):
+    queryset = Comment.objects.all()
+    serializer_class = CommentSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
-@csrf_exempt
-@login_required
-def upload_post(request):
-    if request.method == 'POST':
-        form = PostForm(request.POST, request.FILES)
-        if form.is_valid():
-            post = form.save(commit=False)
-            post.user = request.user
-            
-            # Determine media type
-            if request.FILES['media_file'].content_type.startswith('image'):
-                post.media_type = 'image'
-            elif request.FILES['media_file'].content_type.startswith('video'):
-                post.media_type = 'video'
-            
-            post.save()
-            
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({
-                    'success': True,
-                    'message': 'Post uploaded successfully!',
-                    'username': request.user.username
-                })
-            return redirect('profile', username=request.user.username)
-        else:
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({
-                    'success': False,
-                    'message': 'Invalid form data',
-                    'errors': form.errors
-                }, status=400)
+    def perform_create(self, serializer):
+        comment = serializer.save(user=self.request.user)
+        
+        # Record interaction
+        UserInteraction.objects.create(
+            user=self.request.user,
+            post=comment.post,
+            interaction_type='comment'
+        )
+
+
+def upload_page(request):
+    """Renders the camera UI page"""
+    return render(request, 'upload.html')
+
+@require_POST
+def upload_media(request):
+    try:
+        # Verify file exists in request
+        if 'file' not in request.FILES:
+            return JsonResponse({'status': 'error', 'message': 'No file provided'}, status=400)
+        
+        uploaded_file = request.FILES['file']
+        file_type = request.POST.get('file_type', 'unknown')
+        caption = request.POST.get('caption', '')
+        hashtags = request.POST.get('hashtags', '')
+        mentions = request.POST.get('mentions', '')
+        location = request.POST.get('location', '')
+
+        # Process file and metadata
+        uploaded_file = request.FILES['file']
+
+        # Save file
+        file_path = default_storage.save(f'uploads/{uploaded_file.name}', uploaded_file)
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': 'File uploaded successfully',
+            'path': file_path,
+            'file_type': file_type,
+            'metadata': {
+                'caption': caption,
+                'hashtags': hashtags.split(),
+                'mentions': mentions.split(),
+                'location': location
+            }
+        })
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+
+#for mentions and hashtags on upload page
+def get_users(request):
+    users = User.objects.all().values('id', 'username')
+    return JsonResponse(list(users), safe=False)
+#for mentions and hashtags on upload page
+@cache_page(60 * 15)  # Cache for 15 minutes
+def get_users(request):
+    users = User.objects.all().values('id', 'username')
+    return JsonResponse(list(users), safe=False)
+# views.py
+@cache_page(60 * 15)
+def get_hashtags(request):
+    query = request.GET.get('q', '')
+    # Return filtered hashtags from your database
+    return JsonResponse([], safe=False)
+
+@cache_page(60 * 15)
+def search_users(request):
+    query = request.GET.get('q', '')
+    users = User.objects.filter(username__icontains=query).values('username')
+    return JsonResponse(list(users), safe=False)
+
+
+from rest_framework.pagination import PageNumberPagination
+
+class FeedPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+    def get_paginated_response(self, data):
+        return Response({
+            'count': self.page.paginator.count,
+            'next': self.get_next_link(),
+            'previous': self.get_previous_link(),
+            'results': data
+        })
+
+class FeedViewSet(viewsets.ViewSet):
     
-    form = PostForm()
-    return render(request, 'upload.html', {'form': form})
 
-
+    permission_classes = [permissions.IsAuthenticated]
+    pagination_class = FeedPagination
+    
+    def list(self, request):
+        tab = request.query_params.get('tab', 'reel')
+        page = int(request.query_params.get('page', 1))
+        
+        posts = get_feed_posts(request.user, tab)
+        paginator = self.pagination_class()
+        page_data = paginator.paginate_queryset(posts, request)
+        
+        serializer = PostSerializer(page_data, many=True, context={'request': request})
+        return paginator.get_paginated_response(serializer.data)
 def friends(request):
     return render(request, 'friends.html')
 
@@ -398,17 +577,66 @@ def live(request):
 @login_required
 def like_post(request, post_id):
     post = get_object_or_404(Post, id=post_id)
-    if request.user in post.likes.all():
-        post.likes.remove(request.user)
+    like, created = Like.objects.get_or_create(
+        user=request.user, 
+        post=post
+    )
+    
+    if not created:
+        like.delete()
         liked = False
     else:
-        post.likes.add(request.user)
+        # Record interaction
+        UserInteraction.objects.create(
+            user=request.user,
+            post=post,
+            interaction_type='like'
+        )
         liked = True
+    
     return JsonResponse({
         'success': True,
         'liked': liked,
         'likes_count': post.likes.count()
     })
+
+
+@api_view(['GET', 'POST'])
+@login_required
+def post_comments(request, post_id):
+    post = get_object_or_404(Post, id=post_id)
+    
+    if request.method == 'GET':
+        comments = Comment.objects.filter(post=post).select_related('user')
+        serializer = CommentSerializer(comments, many=True)
+        return Response(serializer.data)
+    
+    elif request.method == 'POST':
+        # Extract text from request data
+        text = request.data.get('text')
+        if not text or text.strip() == '':
+            return Response({"error": "Comment text is required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Create the comment
+        comment = Comment.objects.create(
+            text=text.strip(),
+            user=request.user,
+            post=post
+        )
+        
+        # Record interaction
+        UserInteraction.objects.create(
+            user=request.user,
+            post=post,
+            interaction_type='comment'
+        )
+        
+        # Update comment count on post
+        post.comments_count = Comment.objects.filter(post=post).count()
+        post.save()
+        
+        serializer = CommentSerializer(comment)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 @require_POST
 @login_required
@@ -428,19 +656,13 @@ def follow_user(request, user_id):
         'following': following
     })
 
-@require_POST
-@login_required
-def increment_view(request, post_id):
-    post = get_object_or_404(Post, id=post_id)
-    post.views += 1
-    post.save()
-    return JsonResponse({'success': True})
+
 
 def create_stream(request):
     if request.method == 'POST':
         # Generate Agora token
         app_id = settings.AGORA_APP_ID  # Replace 'AGORA_APP_ID' with the actual attribute name in your settings
-        app_certificate = settings.ee2abd03d2604699b3280f0b64e8a4cb  # Replace with the correct key or variable name
+        app_certificate = settings.AGORA_APP_CERTIFICATE  # Replace with the correct key or variable name
         channel_name = str(uuid.uuid4())
         user_id = request.user.id
         expiration = 3600  # 1 hour
@@ -450,7 +672,7 @@ def create_stream(request):
             app_certificate,
             channel_name,
             user_id,
-            Role.PUBLISHER,
+            RtcTokenBuilder.PUBLISHER,
             expiration
         )
         

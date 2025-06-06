@@ -4,134 +4,580 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% if active_tab == 'friends' %}Following | {% elif active_tab == 'live' %}Live | {% endif %}Feed</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Social Feed</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="{% static 'css/feed.css' %}">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, sans-serif; }
+        body { background: #f0f2f5; color: #1a1a1a; }
+        .feed-container { max-width: 600px; margin: 0 auto; padding: 20px 10px; }
+        .feed-tabs { position: sticky; top: 0; background: white; display: flex; justify-content: center; gap: 20px; padding: 15px 0; z-index: 100; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); border-radius: 12px; margin-bottom: 20px; }
+        .tab-button { display: flex; align-items: center; gap: 8px; color: #65676b; text-decoration: none; padding: 8px 16px; border-radius: 8px; transition: all 0.2s ease; }
+        .tab-button.active { background: #f0f2f5; color: #1a1a1a; }
+        .video-container { background: white; border-radius: 12px; margin-bottom: 20px; position: relative; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); transition: transform 0.2s ease; }
+        .video-wrapper { position: relative; border-radius: 12px 12px 0 0; overflow: hidden; }
+        .video-player { width: 100%; height: 600px; object-fit: cover; background: black; }
+        .action-buttons { position: absolute; right: 15px; bottom: 15px; display: flex; flex-direction: column; gap: 20px; z-index: 2; }
+        .action-button { background: none; border: none; color: white; font-size: 24px; cursor: pointer; display: flex; flex-direction: column; align-items: center; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); transition: transform 0.2s ease; }
+        .action-button.liked { color: #ff3040; }
+        .action-count { font-size: 12px; font-weight: 600; margin-top: 2px; }
+        .video-info { padding: 15px; position: absolute; bottom: 0; left: 0; right: 0; color: white; z-index: 1; }
+        .user-info { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+        .username { color: white; text-decoration: none; font-weight: 600; font-size: 16px; }
+        .follow-btn { background: rgba(255, 255, 255, 0.1); border: none; color: white; padding: 6px 15px; border-radius: 8px; font-weight: 500; cursor: pointer; backdrop-filter: blur(10px); transition: all 0.2s ease; }
+        .profile-pic {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid white;
+        }
+
+        .default-profile-pic {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #3498db;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            border: 2px solid white;
+        }
+
+        .video-caption {
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        .video-meta {
+            display: flex;
+            gap: 15px;
+            margin-top: 8px;
+            font-size: 12px;
+            opacity: 0.9;
+        }
+        .gradient-overlay { position: absolute; bottom: 0; left: 0; right: 0; height: 50%; background: linear-gradient(transparent, rgba(0,0,0,0.7)); }
+        .loading-spinner { display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); }
+        .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        
+        /* Comment Section */
+        .comment-section {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            z-index: 1000;
+            padding: 15px;
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
+            box-shadow: 0 -5px 15px rgba(0,0,0,0.1);
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .comment-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .close-comments {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        
+        .comments-container {
+            margin: 15px 0;
+        }
+        
+        .comment {
+            display: flex;
+            margin-bottom: 15px;
+        }
+        
+        .comment-user-pic {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        
+        .comment-content {
+            flex: 1;
+        }
+        
+        .comment-username {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .comment-text {
+            margin-bottom: 5px;
+        }
+        
+        .comment-time {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .add-comment {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid #eee;
+        }
+        
+        .comment-input {
+            flex: 1;
+            padding: 10px 15px;
+            border-radius: 20px;
+            border: 1px solid #ddd;
+            outline: none;
+        }
+        
+        .post-comment-btn {
+            background: #3897f0;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 0 20px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        
+        .no-comments {
+            text-align: center;
+            color: #888;
+            padding: 20px 0;
+        }
+    </style>
 </head>
 <body>
+    <script>
+        const CURRENT_USER_ID = "{{ request.user.id }}";
+        const CURRENT_USER_USERNAME = "{{ request.user.username }}";
+        const CURRENT_USER_PROFILE_PIC = "{% if request.user.profile.profile_picture %}{{ request.user.profile.profile_picture.url }}{% endif %}";
+         const BASE_URL = "{{ request.scheme }}://{{ request.get_host }}";
+    </script>
+
     <div class="feed-container">
-        <!-- Header Tabs -->
         <div class="feed-tabs">
-            <a href="{% url 'feed' %}?tab=reel" class="tab-button {% if active_tab == 'reel' %}active{% endif %}">
+            <a href="#" class="tab-button active" data-tab="reel">
                 <i class="fas fa-compass"></i> Reel
             </a>
-            <a href="{% url 'feed' %}?tab=friends" class="tab-button {% if active_tab == 'friends' %}active{% endif %}">
+            <a href="#" class="tab-button" data-tab="following">
                 <i class="fas fa-user-friends"></i> Following
             </a>
-            <a href="{% url 'live' %}" class="tab-button {% if active_tab == 'live' %}active{% endif %}">
-                <img src="{% static 'img/logo_t.png' %}" alt="live" class="logo-icon" style="width: 15px; height: 15px;"> Live
+            <a href="#" class="tab-button" data-tab="live">
+                <i class="fas fa-signal"></i> Live
             </a>
         </div>
 
-        <!-- Main Feed Content -->
-        <div class="video-feed">
-            {% for post in posts %}
-            <div class="video-container" data-post-id="{{ post.id }}">
-                <!-- Video/Image Content -->
-                <div class="video-wrapper">
-                    {% if post.video %}
-                    <video controls autoplay loop muted playsinline class="video-player">
-                        <source src="{{ post.video.url }}" type="video/mp4">
-                    </video>
-                    {% elif post.image %}
-                    <img src="{{ post.image.url }}" alt="Post" class="video-player">
-                    {% endif %}
-                </div>
+        <div class="video-feed" id="videoFeed"></div>
 
-                <!-- Right Action Buttons -->
-                <div class="action-buttons">
-                    <!-- Profile Picture -->
-                    <div class="profile-action">
-                        <div class="profile-pic-container">
-                            <a href="{% url 'profile' post.user.username %}">
-                                {% if post.user.profile.image %}
-                                <img src="{{ post.user.profile.image.url }}" class="profile-pic" alt="@{{ post.user.username }}">
-                                {% else %}
-                                <div class="default-profile-pic">
-                                    {{ post.user.username|first|upper }}
-                                </div>
-                                {% endif %}
-                            </a>
-                            {% if post.user != request.user %}
-                            <div class="follow-indicator">
-                                {% if post.user in request.user.profile.following.all %}
-                                <i class="fas fa-check-circle followed"></i>
-                                {% else %}
-                                <i class="fas fa-plus-circle not-followed"></i>
-                                {% endif %}
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
-
-                    <!-- Like Button -->
-                    <button class="action-button like-button" data-post-id="{{ post.id }}">
-                        <i class="{% if request.user in post.likes.all %}fas{% else %}far{% endif %} fa-heart"></i>
-                        <span class="action-count">{{ post.likes.count }}</span>
-                    </button>
-
-                    <!-- Comment Button -->
-                    <button class="action-button comment-button">
-                        <i class="far fa-comment-dots"></i>
-                        <span class="action-count">{{ post.comments.count }}</span>
-                    </button>
-
-                    <!-- Share Button -->
-                    <button class="action-button share-button">
-                        <i class="fas fa-share"></i>
-                    </button>
-
-                    <!-- Download Button -->
-                    {% if post.video %}
-                    <a href="{{ post.video.url }}?download=1" class="action-button download-button">
-                        <i class="fas fa-download"></i>
-                    </a>
-                    {% endif %}
-                </div>
-
-                <!-- Video Info -->
-                <div class="video-info">
-                    <div class="user-info">
-                        <a href="{% url 'profile' post.user.username %}" class="username">@{{ post.user.username }}</a>
-                        {% if post.user != request.user %}
-                        <button class="follow-btn {% if post.user in request.user.profile.following.all %}following{% endif %}" 
-                                data-user-id="{{ post.user.id }}">
-                            {% if post.user in request.user.profile.following.all %}
-                            Following
-                            {% else %}
-                            Follow
-                            {% endif %}
-                        </button>
-                        {% endif %}
-                    </div>
-                    <p class="video-caption">{{ post.caption }}</p>
-                    <div class="video-meta">
-                        <span class="view-count"><i class="fas fa-eye"></i> {{ post.views }} views</span>
-                        <span class="post-time">{{ post.created_at|timesince }} ago</span>
-                    </div>
-                </div>
-            </div>
-            {% empty %}
-            <div class="empty-feed">
-                <i class="fas fa-video-slash"></i>
-                <h3>No videos found</h3>
-                {% if active_tab == 'friends' %}
-                <p>Follow more users to see their content</p>
-                {% else %}
-                <p>Be the first to upload a video</p>
-                {% endif %}
-            </div>
-            {% endfor %}
+        <div class="loading-spinner">
+            <div class="spinner"></div>
         </div>
     </div>
 
-    <!-- Django CSRF Token for AJAX -->
+    <!-- Comment Section -->
+    <div class="comment-section" id="commentSection">
+        <div class="comment-header">
+            <h3>Comments</h3>
+            <button class="close-comments" id="closeComments">&times;</button>
+        </div>
+        
+        <div class="comments-container" id="commentsContainer">
+            <div class="no-comments">Loading comments...</div>
+        </div>
+        
+        <div class="add-comment">
+            <input type="text" class="comment-input" id="commentInput" placeholder="Add a comment...">
+            <button class="post-comment-btn" id="postCommentBtn">Post</button>
+        </div>
+    </div>
+
     <script>
-        const CSRF_TOKEN = "{{ csrf_token }}";
-        const CURRENT_USER = "{{ request.user.username }}";
+        let currentPage = 1;
+        let isLoading = false;
+        let activeTab = 'reel';
+        let hasMore = true;
+        let currentPostId = null;
+
+        // Get CSRF token from cookies
+        function getCSRFToken() {
+            const cookie = document.cookie.match(/csrftoken=([^ ;]+)/);
+            return cookie ? cookie[1] : null;
+        }
+
+        function getProfilePicture(profile) {
+            if (profile && profile.profile_picture) {
+                // Ensure we have the full URL
+                if (profile.profile_picture.startsWith('http')) {
+                    return profile.profile_picture;
+                }
+                return BASE_URL + profile.profile_picture;
+            }
+            return null;
+        }
+
+        // Fetch posts from backend API
+        async function fetchPosts(page = 1, tab = 'reel') {
+            if (isLoading || !hasMore) return;
+            
+            try {
+                isLoading = true;
+                document.querySelector('.loading-spinner').style.display = 'block';
+
+                const response = await fetch(`/api/feed/?page=${page}&tab=${tab}`, {
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        hasMore = false;
+                        return;
+                    }
+                    throw new Error(`Failed to fetch posts: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.results && data.results.length > 0) {
+                    renderPosts(data.results);
+                    currentPage = page + 1;
+                    hasMore = !!data.next;
+                } else {
+                    hasMore = false;
+                }
+            } catch (error) {
+                console.error('Error fetching posts:', error);
+                alert('Failed to load posts. Please try again.');
+            } finally {
+                isLoading = false;
+                document.querySelector('.loading-spinner').style.display = 'none';
+            }
+        }
+
+        // Render posts dynamically
+        function renderPosts(posts) {
+            const feed = document.getElementById('videoFeed');
+            
+            posts.forEach(post => {
+                const isCurrentUser = post.user.id.toString() === CURRENT_USER_ID;
+                const profilePic = post.user.profile?.profile_picture ? 
+                    `<img src="${post.user.profile.profile_picture}" class="profile-pic" alt="@${post.user.username}">` : 
+                    `<div class="default-profile-pic">${post.user.username[0].toUpperCase()}</div>`;
+                
+                const postElement = document.createElement('div');
+                postElement.className = 'video-container';
+                postElement.innerHTML = `
+                    <div class="video-wrapper">
+                        ${post.content_type === 'video' ? 
+                            `<video controls class="video-player">
+                                <source src="${post.media_file}" type="video/mp4">
+                            </video>` : 
+                            `<img src="${post.media_file}" class="video-player">`
+                        }
+                        <div class="gradient-overlay"></div>
+                    </div>
+
+                    <div class="action-buttons">
+                        <div class="profile-action">
+                            <div class="profile-pic-container">
+                                <a href="/profile/${post.user.username}">
+                                    ${profilePic}
+                                </a>
+                            </div>
+                        </div>
+
+                        <button class="action-button like-button ${post.is_liked ? 'liked' : ''}" data-post-id="${post.id}">
+                            <i class="${post.is_liked ? 'fas' : 'far'} fa-heart"></i>
+                            <span class="action-count">${post.likes_count}</span>
+                        </button>
+
+                        <button class="action-button comment-button" data-post-id="${post.id}">
+                            <i class="far fa-comment-dots"></i>
+                            <span class="action-count">${post.comments_count}</span>
+                        </button>
+
+                        <button class="action-button share-button" data-post-id="${post.id}">
+                            <i class="fas fa-share"></i>
+                        </button>
+                    </div>
+
+                    <div class="video-info">
+                        <div class="user-info">
+                            <a href="/profile/${post.user.username}" class="username">@${post.user.username}</a>
+                            ${isCurrentUser ? '' : `
+                                <button class="follow-btn ${post.user.is_following ? 'following' : ''}" 
+                                        data-user-id="${post.user.id}">
+                                    ${post.user.is_following ? 'Following' : 'Follow'}
+                                </button>
+                            `}
+                        </div>
+                        <p class="video-caption">${post.caption || ''}</p>
+                        <div class="video-meta">
+                            <span class="view-count"><i class="fas fa-eye"></i> ${post.views} views</span>
+                            <span class="post-time">${post.created_at}</span>
+                        </div>
+                    </div>
+                `;
+                
+                feed.appendChild(postElement);
+            });
+        }
+
+        // Load comments for a post
+        async function loadComments(postId) {
+            try {
+                document.getElementById('commentsContainer').innerHTML = '<div class="no-comments">Loading comments...</div>';
+                
+                const response = await fetch(`/api/posts/${postId}/comments/`);
+                if (!response.ok) throw new Error('Failed to load comments');
+                
+                const comments = await response.json();
+                renderComments(comments);
+            } catch (error) {
+                console.error('Error loading comments:', error);
+                document.getElementById('commentsContainer').innerHTML = '<div class="no-comments">Failed to load comments</div>';
+            }
+        }
+
+        // Render comments in the comment section
+        function renderComments(comments) {
+            const container = document.getElementById('commentsContainer');
+            container.innerHTML = '';
+            
+            if (comments.length === 0) {
+                container.innerHTML = '<div class="no-comments">No comments yet. Be the first to comment!</div>';
+                return;
+            }
+            
+            comments.forEach(comment => {
+                const commentElement = document.createElement('div');
+                commentElement.className = 'comment';
+                
+                // Format timestamp
+                const commentDate = new Date(comment.created_at);
+                const formattedTime = commentDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                
+                const profilePic = comment.user.profile?.profile_picture ? 
+                    `<img src="${comment.user.profile.profile_picture}" class="comment-user-pic" alt="@${comment.user.username}">` : 
+                    `<div class="comment-user-pic default-profile-pic small">${comment.user.username[0].toUpperCase()}</div>`;
+                
+                commentElement.innerHTML = `
+                    ${profilePic}
+                    <div class="comment-content">
+                        <div class="comment-username">@${comment.user.username}</div>
+                        <div class="comment-text">${comment.text}</div>
+                        <div class="comment-time">${formattedTime}</div>
+                    </div>
+                `;
+                
+                container.appendChild(commentElement);
+            });
+            
+            // Scroll to bottom of comments
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Post a new comment
+        async function postComment(postId, text) {
+            try {
+                const response = await fetch(`/api/posts/${postId}/comments/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken()
+                    },
+                    body: JSON.stringify({ text })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to post comment');
+                }
+                
+                // Reload comments
+                loadComments(postId);
+                document.getElementById('commentInput').value = '';
+                
+                // Update comment count in feed
+                const commentButton = document.querySelector(`.comment-button[data-post-id="${postId}"]`);
+                if (commentButton) {
+                    const countSpan = commentButton.querySelector('.action-count');
+                    countSpan.textContent = parseInt(countSpan.textContent) + 1;
+                }
+            } catch (error) {
+                console.error('Error posting comment:', error);
+                alert(`Error: ${error.message}`);
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchPosts();
+            
+            // Comment section event listeners
+            document.getElementById('closeComments').addEventListener('click', () => {
+                document.getElementById('commentSection').style.display = 'none';
+            });
+            
+            document.getElementById('postCommentBtn').addEventListener('click', () => {
+                const text = document.getElementById('commentInput').value.trim();
+                if (text && currentPostId) {
+                    postComment(currentPostId, text);
+                } else if (!text) {
+                    alert('Please enter a comment');
+                }
+            });
+            
+            // Allow Enter key to post comment
+            document.getElementById('commentInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    const text = e.target.value.trim();
+                    if (text && currentPostId) {
+                        postComment(currentPostId, text);
+                    }
+                }
+            });
+        });
+
+        // Infinite scroll
+        window.addEventListener('scroll', () => {
+            if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 500 && !isLoading && hasMore) {
+                fetchPosts(currentPage, activeTab);
+            }
+        });
+
+        // Tab switching
+        document.querySelectorAll('.tab-button').forEach(tab => {
+            tab.addEventListener('click', function(e) {
+                e.preventDefault();
+                activeTab = this.dataset.tab;
+                currentPage = 1;
+                hasMore = true;
+                document.querySelectorAll('.tab-button').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+                fetchPosts(1, activeTab);
+            });
+        });
+
+        // Handle dynamic event delegation
+        document.getElementById('videoFeed').addEventListener('click', async (e) => {
+            // Like functionality
+            if (e.target.closest('.like-button')) {
+                const button = e.target.closest('.like-button');
+                const postId = button.dataset.postId;
+                const icon = button.querySelector('i');
+                const countSpan = button.querySelector('.action-count');
+
+                try {
+                    const response = await fetch(`/api/posts/${postId}/like`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCSRFToken()
+                        }
+                    });
+
+                    if (response.ok) {
+                        const result = await response.json();
+                        
+                        // Update UI
+                        button.classList.toggle('liked');
+                        if (result.liked) {
+                            icon.classList.remove('far');
+                            icon.classList.add('fas');
+                        } else {
+                            icon.classList.remove('fas');
+                            icon.classList.add('far');
+                        }
+                        countSpan.textContent = result.likes_count;
+                    }
+                } catch (error) {
+                    console.error('Error liking post:', error);
+                }
+            }
+
+            // Comment functionality
+            if (e.target.closest('.comment-button')) {
+                const button = e.target.closest('.comment-button');
+                currentPostId = button.dataset.postId;
+                
+                // Show comment section
+                document.getElementById('commentSection').style.display = 'block';
+                
+                // Load comments
+                loadComments(currentPostId);
+                
+                // Focus comment input
+                setTimeout(() => {
+                    document.getElementById('commentInput').focus();
+                }, 100);
+            }
+
+            // Follow functionality
+            if (e.target.closest('.follow-btn')) {
+                const button = e.target.closest('.follow-btn');
+                const userId = button.dataset.userId;
+                const isFollowing = button.classList.contains('following');
+
+                try {
+                    const response = await fetch(`/api/follow/${userId}/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCSRFToken()
+                        },
+                        body: JSON.stringify({
+                            action: isFollowing ? 'unfollow' : 'follow'
+                        })
+                    });
+
+                    if (response.ok) {
+                        const result = await response.json();
+                        button.classList.toggle('following');
+                        button.textContent = result.is_following ? 'Following' : 'Follow';
+                    }
+                } catch (error) {
+                    console.error('Error following user:', error);
+                }
+            }
+
+            // Share functionality
+            if (e.target.closest('.share-button')) {
+                const button = e.target.closest('.share-button');
+                const postId = button.dataset.postId;
+                const shareUrl = `${window.location.origin}/post/${postId}`;
+
+                try {
+                    if (navigator.share) {
+                        await navigator.share({
+                            title: 'Check this post!',
+                            url: shareUrl
+                        });
+                    } else {
+                        await navigator.clipboard.writeText(shareUrl);
+                        alert('Link copied to clipboard!');
+                    }
+                } catch (error) {
+                    console.log('Share cancelled');
+                }
+            }
+        });
     </script>
-    
-    <script src="{% static 'js/feed.js' %}"></script>
 </body>
 </html>

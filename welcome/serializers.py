@@ -87,8 +87,11 @@ class ProfileSerializer(serializers.ModelSerializer):
             request = self.context.get('request')
             if request:
                 return request.build_absolute_uri(obj.profile_picture.url)
+                
+            else:
                 return f"{settings.BASE_URL}{obj.profile_picture.url}"
-            return None
+       
+       return None
 
     def get_followers_count(self, obj):
         return obj.followers.count()
@@ -102,17 +105,37 @@ class ProfileSerializer(serializers.ModelSerializer):
             return obj.followers.filter(id=request.user.profile.id).exists()
         return False
 
+class UserProfileSerializer(serializers.ModelSerializer):
+    profile_picture = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'profile_picture']
+    
+    def get_profile_picture(self, obj):
+        if hasattr(obj, 'profile') and obj.profile.profile_picture:
+            profile = obj.profile
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(profile.profile_picture.url)
+            else:
+                return f"{settings.BASE_DIR}{profile.profile_picture.url}"
+        return None
+
 class PostSerializer(serializers.ModelSerializer):
-    user = UserSerializer(read_only=True)
+    user = UserProfileSerializer(read_only=True)
     likes_count = serializers.SerializerMethodField()
     comments_count = serializers.SerializerMethodField()
     is_liked = serializers.SerializerMethodField()
-    media_url = serializers.SerializerMethodField()
+    media_file = serializers.SerializerMethodField()
+    #media_file = serializers.SerializerMethodField()
 
     class Meta:
         model = Post
-        fields = '__all__'
-        read_only_fields = ['user', 'views', 'created_at', 'score']
+        fields = ['id', 'user', 'content_type', 'media_file', 'caption', 
+                  'hashtags', 'mentions', 'location', 'created_at', 
+                  'views', 'likes_count', 'comments_count', 'is_liked']
+        #read_only_fields = ['user', 'views', 'created_at', 'score']
 
     def get_likes_count(self, obj):
         return obj.likes.count()
@@ -126,7 +149,7 @@ class PostSerializer(serializers.ModelSerializer):
             return obj.likes.filter(user=request.user).exists()
         return False
 
-    def get_media_url(self, obj):
+    def get_media_file(self, obj):
         request = self.context.get('request')
         if obj.media_file:
             return request.build_absolute_uri(obj.media_file.url)
@@ -138,7 +161,7 @@ class LikeSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class CommentSerializer(serializers.ModelSerializer):
-    user = UserSerializer(read_only=True)
+    user = UserProfileSerializer(read_only=True)
 
     class Meta:
         model = Comment

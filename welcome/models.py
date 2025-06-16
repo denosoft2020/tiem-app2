@@ -53,6 +53,11 @@ class Profile(models.Model):
         symmetrical=False,
         blank=True
     )
+    @property
+    def profile_picture_url(self):
+        if self.profile_picture:
+            return self.profile_picture.url
+        return None
     #created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

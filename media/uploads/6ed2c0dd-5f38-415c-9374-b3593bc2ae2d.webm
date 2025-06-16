@@ -1,0 +1,1110 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Advanced Camera App</title>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Emoji Picker CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/emoji-picker-element@1.12.0/dist/emoji-picker.min.css">
+    <!-- Howler.js for audio -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #000;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        .camera-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .camera-feed {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        #camera {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1); /* Mirror effect for front camera */
+        }
+
+        canvas {
+            display: none;
+        }
+
+        /* Right-side icons */
+        .right-icons {
+            position: absolute;
+            top: env(safe-area-inset-top, 20px);
+            right: max(10px, env(safe-area-inset-right));
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            z-index: 10;
+        }
+
+        .icon-btn {
+            background-color: rgba(0, 0, 0, 0.3);
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+        }
+
+        .icon-btn.active {
+            background-color: rgba(255, 255, 255, 0.3);
+            color: #fffc00;
+        }
+
+        /* Bottom controls */
+        .bottom-controls {
+            position: absolute;
+            bottom: max(20px, env(safe-area-inset-bottom));
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            z-index: 10;
+            padding: 0 20px;
+        }
+
+        .gallery-btn, .switch-btn {
+            background-color: rgba(0, 0, 0, 0.3);
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+        }
+
+        .shutter-btn {
+            background-color: white;
+            border: 4px solid rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            width: 70px;
+            height: 70px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .shutter-btn.recording {
+            border-radius: 20%;
+            background-color: red;
+            border-color: rgba(255, 0, 0, 0.5);
+            transform: scale(0.9);
+        }
+
+        /* Recording timer */
+        .recording-timer {
+            position: absolute;
+            top: env(safe-area-inset-top, 20px);
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(255, 0, 0, 0.5);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            display: none;
+            z-index: 10;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+        }
+
+        /* Preview container */
+        #previewContainer {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: black;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        }
+
+        #previewMedia, #previewImage {
+            max-width: 50%;
+            max-height: 80vh;
+            display: none;
+        }
+
+        #previewMedia {
+            width: 100%;
+        }
+
+        .preview-controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 20px;
+        }
+
+        .preview-btn {
+            background-color: rgba(255, 255, 255, 0.3);
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+        }
+
+        .preview-metadata {
+        width: 80%;
+        max-width: 500px;
+        margin: 20px 0;
+        }
+
+        .caption-input {
+            width: 100%;
+            height: 100px;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #666;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 16px;
+            resize: none;
+        }
+
+        .optional-input {
+            width: 100%;
+            padding: 8px 12px;
+            margin: 5px 0;
+            border: 1px solid #444;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            font-size: 14px;
+        }
+
+        /* Overlay panels */
+        .overlay-panel {
+            position: absolute;
+            bottom: 100px;
+            left: 0;
+            right: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            border-radius: 20px 20px 0 0;
+            padding: 15px;
+            z-index: 15;
+            display: none;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            max-height: 50vh;
+            overflow-y: auto;
+        }
+
+        /* Loading Spinner */
+        .loader {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Flash Status Indicator */
+        .flash-status {
+            position: absolute;
+            top: env(safe-area-inset-top, 20px);
+            left: 20px;
+            color: white;
+            font-size: 14px;
+            background: rgba(0,0,0,0.5);
+            padding: 5px 10px;
+            border-radius: 15px;
+        }
+        
+        .overlay-panel h3 {
+            color: white;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .effects-grid, .stickers-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        .effect-item, .sticker-item {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 10px;
+            text-align: center;
+            color: white;
+            cursor: pointer;
+        }
+
+        .effect-item:hover, .sticker-item:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .music-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .music-item {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 10px;
+            color: white;
+            cursor: pointer;
+        }
+
+        .music-item.playing {
+            background-color: rgba(0, 150, 255, 0.5);
+        }
+
+        .close-panel {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 500px) {
+            .icon-btn {
+                width: 36px;
+                height: 36px;
+                font-size: 16px;
+            }
+            
+            .gallery-btn, .switch-btn {
+                width: 45px;
+                height: 45px;
+                font-size: 18px;
+            }
+            
+            .shutter-btn {
+                width: 65px;
+                height: 65px;
+            }
+            
+            .recording-timer {
+                font-size: 13px;
+                padding: 4px 12px;
+            }
+        }
+
+        @media (max-height: 700px) {
+            .bottom-controls {
+                bottom: 10px;
+            }
+            
+            .right-icons {
+                top: 10px;
+                gap: 10px;
+            }
+            
+            .overlay-panel {
+                bottom: 80px;
+                max-height: 40vh;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="camera-container">
+        <!-- Camera feed -->
+        <video id="camera" autoplay playsinline class="camera-feed"></video>
+        <canvas id="canvas"></canvas>
+
+        <!-- Recording timer -->
+        <div class="recording-timer" id="recordingTimer">00:00</div>
+
+        <!-- Right-side icons -->
+        <div class="right-icons">
+            <button class="icon-btn" id="switchCameraBtn"><i class="fas fa-camera-rotate"></i></button>
+            <button class="icon-btn" id="flashBtn"><i class="fas fa-bolt"></i></button>
+            <button class="icon-btn" id="musicBtn"><i class="fas fa-music"></i></button>
+            <button class="icon-btn" id="stickerBtn"><i class="fas fa-smile"></i></button>
+            <button class="icon-btn" id="effectsBtn"><i class="fas fa-moon"></i></button>
+            <button class="icon-btn" id="downloadBtn"><i class="fas fa-arrow-down"></i></button>
+        </div>
+
+        <!-- Bottom controls -->
+        <div class="bottom-controls">
+            <button class="gallery-btn" id="galleryBtn"><i class="fas fa-image"></i></button>
+            <button class="shutter-btn" id="shutterBtn"></button>
+            <button class="switch-btn" id="switchModeBtn"><i class="fas fa-sync-alt"></i></button>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div class="loader" id="loadingSpinner"></div>
+        <div class="flash-status" id="flashStatus">Flash: Off</div>
+
+        <!-- Flashlight panel -->
+        <div class="overlay-panel" id="flashPanel">
+            <h3>Flashlight</h3>
+            <span class="close-panel" onclick="closePanel('flashPanel')"><i class="fas fa-times"></i></span>
+            <div class="effects-grid">
+                <div class="effect-item" onclick="setFlashMode('off')">
+                    <i class="fas fa-power-off"></i>
+                    <p>Off</p>
+                </div>
+                <div class="effect-item" onclick="setFlashMode('on')">
+                    <i class="fas fa-bolt"></i>
+                    <p>On</p>
+                </div>
+                <div class="effect-item" onclick="setFlashMode('auto')">
+                    <i class="fas fa-magic"></i>
+                    <p>Auto</p>
+                </div>
+                <div class="effect-item" onclick="setFlashMode('torch')">
+                    <i class="fas fa-fire"></i>
+                    <p>Torch</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Music panel -->
+        <div class="overlay-panel" id="musicPanel">
+            <h3>Music</h3>
+            <span class="close-panel" onclick="closePanel('musicPanel')"><i class="fas fa-times"></i></span>
+            <div class="music-list" id="musicList">
+                <!-- Music items will be added dynamically -->
+            </div>
+        </div>
+
+        <!-- Stickers panel -->
+        <div class="overlay-panel" id="stickerPanel">
+            <h3>Stickers & Emojis</h3>
+            <span class="close-panel" onclick="closePanel('stickerPanel')"><i class="fas fa-times"></i></span>
+            <emoji-picker></emoji-picker>
+            <div class="stickers-grid" id="stickersGrid">
+                <!-- Stickers will be added dynamically -->
+            </div>
+        </div>
+
+        <!-- Effects panel -->
+        <div class="overlay-panel" id="effectsPanel">
+            <h3>Effects & Beautify</h3>
+            <span class="close-panel" onclick="closePanel('effectsPanel')"><i class="fas fa-times"></i></span>
+            <div class="effects-grid" id="effectsGrid">
+                <!-- Effects will be added dynamically -->
+            </div>
+        </div>
+
+        <!-- Preview container -->
+        <div id="previewContainer">
+            <video id="previewMedia" controls></video>
+            <img id="previewImage" alt="Captured photo">
+            <div class="preview-controls">
+                <button class="preview-btn" id="backBtn"><i class="fas fa-times"></i></button>
+                <button class="preview-btn" id="sendBtn" name="sendBtn"><i class="fas fa-paper-plane"></i></button>
+            </div>
+            <input type="hidden" id="capturedData" name="capturedData">
+            <input type="file" id="filePicker" accept="image/*,video/*" style="display:none;">
+            <div class="preview-metadata">
+                <textarea id="captionInput" placeholder="Add a caption..." class="caption-input"></textarea>
+                <input type="text" id="hashtags" placeholder="#hashtags (optional)" class="optional-input">
+                <input type="text" id="mentions" placeholder="@mentions (optional)" class="optional-input">
+                <input type="text" id="location" placeholder="📍 Location (optional)" class="optional-input">
+            </div>
+        </div>
+    </div>
+
+    <!-- Emoji Picker JS -->
+    <script src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1.12.0/dist/emoji-picker.min.js"></script>
+    <!-- Howler.js for audio -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js"></script>
+    <!-- TensorFlow.js for face effects (optional) -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.18.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM elements
+            const camera = document.getElementById('camera');
+            const canvas = document.getElementById('canvas');
+            const shutterBtn = document.getElementById('shutterBtn');
+            const switchModeBtn = document.getElementById('switchModeBtn');
+            const galleryBtn = document.getElementById('galleryBtn');
+            const switchCameraBtn = document.getElementById('switchCameraBtn');
+            const flashBtn = document.getElementById('flashBtn');
+            const musicBtn = document.getElementById('musicBtn');
+            const stickerBtn = document.getElementById('stickerBtn');
+            const effectsBtn = document.getElementById('effectsBtn');
+            const previewContainer = document.getElementById('previewContainer');
+            const previewMedia = document.getElementById('previewMedia');
+            const previewImage = document.getElementById('previewImage');
+            const recordingTimer = document.getElementById('recordingTimer');
+            const filePicker = document.getElementById('filePicker');
+            const backBtn = document.getElementById('backBtn');
+            const sendBtn = document.getElementById('sendBtn');
+            const musicList = document.getElementById('musicList');
+            const stickersGrid = document.getElementById('stickersGrid');
+            const effectsGrid = document.getElementById('effectsGrid');
+
+            // State variables
+            let mediaStream;
+            let mediaRecorder;
+            let recordedChunks = [];
+            let isVideoMode = false;
+            let facingMode = 'user'; // front camera by default
+            let recordingStartTime;
+            let timerInterval;
+            let isFrontCamera = true;
+            let flashMode = 'off';
+            let currentMusic = null;
+            let currentEffect = null;
+            let currentSticker = null;
+
+            // Sample music tracks (replace with your own or use a music API)
+            const musicTracks = [
+                {
+                    id: 1,
+                    name: "Happy Beat",
+                    url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+                },
+                {
+                    id: 2,
+                    name: "Upbeat Party",
+                    url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3"
+                },
+                {
+                    id: 3,
+                    name: "Chill Vibes",
+                    url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"
+                }
+            ];
+
+            // Sample stickers (replace with your own)
+            const stickers = [
+                { name: "Heart", emoji: "❤️" },
+                { name: "Star", emoji: "⭐" },
+                { name: "Fire", emoji: "🔥" },
+                { name: "Laugh", emoji: "😂" },
+                { name: "Cool", emoji: "😎" },
+                { name: "Party", emoji: "🎉" },
+                { name: "Music", emoji: "🎵" },
+                { name: "Camera", emoji: "📷" }
+            ];
+
+            // Sample effects (these would normally apply filters to the camera)
+            const effects = [
+                { name: "Beautify", icon: "fas fa-spa" },
+                { name: "Dog Ears", icon: "fas fa-dog" },
+                { name: "Glasses", icon: "fas fa-glasses" },
+                { name: "Vintage", icon: "fas fa-camera-retro" },
+                { name: "Black & White", icon: "fas fa-moon" },
+                { name: "Sepia", icon: "fas fa-sun" },
+                { name: "Pixelate", icon: "fas fa-th-large" },
+                { name: "Blur", icon: "fas fa-eye-slash" }
+            ];
+
+            // Initialize the app
+            async function initApp() {
+                await initCamera();
+                initMusicPanel();
+                initStickersPanel();
+                initEffectsPanel();
+                setupEventListeners();
+            }
+
+            // Initialize camera
+            async function initCamera() {
+                try {
+                    // Stop existing stream if any
+                    if (mediaStream) {
+                        mediaStream.getTracks().forEach(track => track.stop());
+                    }
+
+                    const constraints = {
+                        video: {
+                            facingMode: facingMode,
+                            width: { ideal: 1920 },
+                            height: { ideal: 1080 }
+                        },
+                        audio: isVideoMode
+                    };
+
+                    mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+                    camera.srcObject = mediaStream;
+                    
+                    // Mirror the video only for front camera
+                    camera.style.transform = isFrontCamera ? 'scaleX(-1)' : 'scaleX(1)';
+                } catch (err) {
+                    console.error("Camera error:", err);
+                    alert("Could not access the camera. Please check permissions.");
+                }
+            }
+
+            // Initialize music panel
+            function initMusicPanel() {
+                musicList.innerHTML = '';
+                musicTracks.forEach(track => {
+                    const item = document.createElement('div');
+                    item.className = 'music-item';
+                    item.innerHTML = `
+                        <i class="fas fa-music"></i>
+                        <span>${track.name}</span>
+                    `;
+                    item.addEventListener('click', () => playMusic(track));
+                    musicList.appendChild(item);
+                });
+            }
+
+            // Initialize stickers panel
+            function initStickersPanel() {
+                stickersGrid.innerHTML = '';
+                stickers.forEach(sticker => {
+                    const item = document.createElement('div');
+                    item.className = 'sticker-item';
+                    item.innerHTML = `
+                        <div style="font-size: 24px;">${sticker.emoji}</div>
+                        <p>${sticker.name}</p>
+                    `;
+                    item.addEventListener('click', () => addSticker(sticker));
+                    stickersGrid.appendChild(item);
+                });
+            }
+
+            // Initialize effects panel
+            function initEffectsPanel() {
+                effectsGrid.innerHTML = '';
+                effects.forEach(effect => {
+                    const item = document.createElement('div');
+                    item.className = 'effect-item';
+                    item.innerHTML = `
+                        <i class="${effect.icon}"></i>
+                        <p>${effect.name}</p>
+                    `;
+                    item.addEventListener('click', () => applyEffect(effect));
+                    effectsGrid.appendChild(item);
+                });
+            }
+
+            // Play music track
+            function playMusic(track) {
+                // Stop current music if playing
+                if (currentMusic) {
+                    currentMusic.stop();
+                }
+                
+                // Highlight selected track
+                document.querySelectorAll('.music-item').forEach(item => {
+                    item.classList.remove('playing');
+                });
+                event.target.closest('.music-item').classList.add('playing');
+                
+                // Play new track
+                currentMusic = new Howl({
+                    src: [track.url],
+                    html5: true,
+                    volume: 0.5
+                });
+                currentMusic.play();
+                
+                closePanel('musicPanel');
+            }
+
+            // Add sticker to camera view
+            function addSticker(sticker) {
+                // In a real app, this would add the sticker to the camera view
+                console.log(`Adding sticker: ${sticker.name}`);
+                currentSticker = sticker;
+                closePanel('stickerPanel');
+                
+                // Here you would typically add the sticker to a canvas overlay
+                // For now we'll just show an alert
+                alert(`Sticker ${sticker.name} added!`);
+            }
+
+            // Apply effect to camera
+            function applyEffect(effect) {
+                // In a real app, this would apply the effect to the camera feed
+                console.log(`Applying effect: ${effect.name}`);
+                currentEffect = effect;
+                closePanel('effectsPanel');
+                
+                // Here you would typically apply a filter to the video stream
+                // For now we'll just show an alert
+                alert(`Effect ${effect.name} applied!`);
+            }
+
+            // Set flash mode
+            async function setFlashMode(mode) {
+                try {
+                    const track = mediaStream.getVideoTracks()[0];
+                    await track.applyConstraints({
+                        advanced: [{torch: mode === 'torch', fillLightMode: mode === 'on' ? 'flash' : mode}]
+                    });
+                    flashMode = mode;
+                    flashBtn.classList.toggle('active', mode !== 'off');
+                    document.getElementById('flashStatus').textContent = `Flash: ${mode.charAt(0).toUpperCase() + mode.slice(1)}`;
+                } catch (err) {
+                    console.error('Flash error:', err);
+                    document.getElementById('flashStatus').textContent = 'Flash: Unavailable';
+                    setTimeout(() => {
+                        document.getElementById('flashStatus').textContent = `Flash: ${flashMode}`;
+                    }, 2000);
+                    alert('Flash not supported on this device');
+                }
+            }
+
+            // Show panel
+            function showPanel(panelId) {
+                // Close all panels first
+                document.querySelectorAll('.overlay-panel').forEach(panel => {
+                    panel.style.display = 'none';
+                });
+                
+                // Show requested panel
+                document.getElementById(panelId).style.display = 'block';
+            }
+
+            // Close panel
+            function closePanel(panelId) {
+                document.getElementById(panelId).style.display = 'none';
+            }
+
+            // Update recording timer
+            function updateTimer() {
+                const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+                const minutes = Math.floor(elapsed / 60).toString().padStart(2, '0');
+                const seconds = (elapsed % 60).toString().padStart(2, '0');
+                recordingTimer.textContent = `${minutes}:${seconds}`;
+            }
+
+            // Take photo
+            function takePhoto() {
+                const context = canvas.getContext('2d');
+                
+                // Adjust canvas size to match video
+                canvas.width = camera.videoWidth;
+                canvas.height = camera.videoHeight;
+                
+                // Mirror the image if using front camera
+                if (isFrontCamera) {
+                    context.translate(canvas.width, 0);
+                    context.scale(-1, 1);
+                }
+                
+                context.drawImage(camera, 0, 0, canvas.width, canvas.height);
+                
+                // Reset transformation
+                if (isFrontCamera) {
+                    context.setTransform(1, 0, 0, 1, 0, 0);
+                }
+                
+                const imageData = canvas.toDataURL('image/jpeg', 0.9);
+                previewImage.src = imageData;
+                previewImage.style.display = 'block';
+                previewMedia.style.display = 'none';
+                previewContainer.style.display = 'flex';
+            }
+
+            // Start recording video
+            function startRecording() {
+
+                mediaStream.getAudioTracks().forEach(track => {
+                    track.enabled = false;
+                });
+
+                recordedChunks = [];
+                mediaRecorder = new MediaRecorder(mediaStream, {
+                    mimeType: 'video/webm;codecs=vp9'
+                });
+                
+                mediaRecorder.ondataavailable = function(e) {
+                    if (e.data.size > 0) recordedChunks.push(e.data);
+                };
+
+                mediaRecorder.onstop = function() {
+                    const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                    const url = URL.createObjectURL(blob);
+
+                    previewMedia.src = url;
+                    previewMedia.style.display = 'block';
+                    previewImage.style.display = 'none';
+                    previewContainer.style.display = 'flex';
+
+                    // Stop and hide timer
+                    clearInterval(timerInterval);
+                    recordingTimer.style.display = 'none';
+                };
+
+                // Start timer
+                recordingStartTime = Date.now();
+                recordingTimer.style.display = 'block';
+                recordingTimer.textContent = '00:00';
+                timerInterval = setInterval(updateTimer, 1000);
+
+                mediaRecorder.start(100); // Collect data every 100ms
+                shutterBtn.classList.add('recording');
+            }
+
+        // Stop recording video
+            function stopRecording() {
+                if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                    mediaRecorder.stop();
+                    shutterBtn.classList.remove('recording');
+                }
+        }
+
+            // Switch between front and back camera
+            async function switchCamera() {
+                facingMode = facingMode === 'user' ? 'environment' : 'user';
+                isFrontCamera = !isFrontCamera;
+                await initCamera();
+            }
+
+            // Toggle between photo and video mode
+            function toggleMode() {
+                isVideoMode = !isVideoMode;
+                switchModeBtn.innerHTML = isVideoMode 
+                    ? '<i class="fas fa-camera"></i>' 
+                    : '<i class="fas fa-video"></i>';
+                
+                // Reinitialize camera with proper audio setting
+                initCamera();
+            }
+
+            // Handle gallery file selection
+            function handleFile(file) {
+                if (!file) return;
+                const url = URL.createObjectURL(file);
+                previewContainer.style.display = 'flex';
+
+                if (file.type.startsWith('video/')) {
+                    previewMedia.src = url;
+                    previewMedia.style.display = 'block';
+                    previewImage.style.display = 'none';
+                } else {
+                    previewImage.src = url;
+                    previewImage.style.display = 'block';
+                    previewMedia.style.display = 'none';
+                }
+            }
+
+            // Setup event listeners
+            function setupEventListeners() {
+                // Shutter button
+                shutterBtn.addEventListener('click', function() {
+                    if (isVideoMode) {
+                        if (mediaRecorder && mediaRecorder.state === 'recording') {
+                            stopRecording();
+                        } else {
+                            startRecording();
+                        }
+                    } else {
+                        takePhoto();
+                    }
+                });
+                // Add this function to convert data URLs to Blobs
+                function dataURLtoBlob(dataURL) {
+                    const arr = dataURL.split(',');
+                    const mime = arr[0].match(/:(.*?);/)[1];
+                    const bstr = atob(arr[1]);
+                    let n = bstr.length;
+                    const u8arr = new Uint8Array(n);
+                    while (n--) {
+                    u8arr[n] = bstr.charCodeAt(n);
+                    }
+                    return new Blob([u8arr], { type: mime });
+                }
+
+                // Updated send button handler
+                sendBtn.addEventListener('click', async function(e) {
+                    e.preventDefault(); // Prevent default form submission
+                    const loader = document.getElementById('loadingSpinner');
+
+                    let mediaBlob;
+                    let filename;
+                    let fileType;
+                    const caption = document.getElementById('captionInput').value;
+                    const hashtags = document.getElementById('hashtags').value;
+                    const mentions = document.getElementById('mentions').value;
+                    const location = document.getElementById('location').value;
+
+                    try {
+                        if (previewMedia.src && previewMedia.style.display === 'block') {
+                            // Handle video (Blob URL)
+                            mediaBlob = await fetch(previewMedia.src).then(r => r.blob());
+                            filename = `video_${Date.now()}.webm`;
+                            fileType = 'video';
+                        } else if (previewImage.src && previewImage.src.startsWith('data:')) {
+                            // Handle image (Data URL)
+                            mediaBlob = dataURLtoBlob(previewImage.src);
+                            filename = `image_${Date.now()}.jpg`;
+                            fileType = 'image';
+                        } else {
+                            throw new Error('No valid media to upload');
+                        }
+
+                        // Show loading spinner
+                        loader.style.display = 'block';
+
+                        // Collect metadata and media
+                        const formData = new FormData();
+                        formData.append('file', mediaBlob, filename);
+                        formData.append('file_type', fileType);
+                        formData.append('caption', document.getElementById('captionInput').value);
+                        formData.append('hashtags', document.getElementById('hashtags').value);
+                        formData.append('mentions', document.getElementById('mentions').value);
+                        formData.append('location', document.getElementById('location').value);
+                        
+                        if (previewMedia.src) {
+                            const response = await fetch(previewMedia.src);
+                            const blob = await response.blob();
+                            formData.append('file', blob, `video_${Date.now()}.webm`);
+                        } else {
+                            const blob = dataURLtoBlob(previewImage.src);
+                            formData.append('file', blob, `image_${Date.now()}.jpg`);
+                        }
+
+                        const csrfToken = getCookie('csrftoken');
+                        formData.append('csrfmiddlewaretoken', csrfToken);
+
+                        if (!csrfToken) {
+                            throw new Error('CSRF token not found');
+                        }
+
+                        const response = await fetch('/api/upload/', {
+                            method: 'POST',
+                            body: formData,
+                            headers: {
+                                'X-CSRFToken': csrfToken,
+                            },
+                            credentials: 'include'
+                        });
+
+                        const data = await response.json();
+
+                        if (data.status === 'success') {
+                            alert('Media uploaded successfully!');
+                            previewContainer.style.display = 'none';
+                            previewImage.src = '';
+                            previewMedia.src = '';
+                            window.location.href ="/feed/"; // Redirect to home or another page
+                        } else {
+                            throw new Error(data.errors || 'Upload failed');
+                        }
+                    } catch (error) {
+                        console.error('Upload error:', error);
+                        alert(`Upload failed: ${error.message}`);
+                    }
+                    finally {
+                        // Hide loading spinner
+                        loader.style.display = 'none';
+                    }
+                });
+
+                
+                // Tag Suggestions
+                let users = [];
+
+                // Fetch users when the app initializes
+                async function fetchUsers() {
+                    try {
+                        const response = await fetch('/api/users/');
+                        if (!response.ok) throw new Error('Failed to fetch users');
+                        users = await response.json();
+                    } catch (error) {
+                        console.error('Error fetching users:', error);
+                        users = []; // Fallback to empty array
+                    }
+                }
+
+                // Initialize with user fetching
+                async function initApp() {
+                    await fetchUsers();
+                    await initCamera();
+                    initMusicPanel();
+                    initStickersPanel();
+                    initEffectsPanel();
+                    setupEventListeners();
+                }
+
+                document.getElementById('mentions').addEventListener('input', function(e) {
+                    const input = e.target.value.toLowerCase().replace('@', '');
+                    const suggestions = users
+                        .filter(user => user.username.toLowerCase().includes(input))
+                        .map(user => `@${user.username}`);
+                    showSuggestions(this, suggestions);
+                });
+
+                document.getElementById('hashtags').addEventListener('input', function(e) {
+                    const input = e.target.value.toLowerCase();
+                    const suggestions = popularHashtags
+                        .filter(tag => tag.startsWith(input.replace('#', '')))
+                        .map(tag => `#${tag}`);
+                    showSuggestions(this, suggestions);
+                });
+
+                function showSuggestions(inputElement, suggestions) {
+                    // Implement suggestion dropdown UI
+                    // Add click handlers to populate input
+                }
+
+                // ======================
+                // Location Autocomplete
+                // ======================
+                document.getElementById('location').addEventListener('focus', function() {
+                    if (navigator.geolocation) {
+                        navigator.geolocation.getCurrentPosition(position => {
+                            const { latitude, longitude } = position.coords;
+                            // Reverse geocoding API call here
+                            // Update input value with location name
+                        });
+                    }
+                });
+
+                // Initialize muted video
+                camera.muted = true;
+                previewMedia.muted = true;
+
+                // Mode switch
+                switchModeBtn.addEventListener('click', toggleMode);
+
+                // Camera switch
+                switchCameraBtn.addEventListener('click', switchCamera);
+
+                // Flash button
+                flashBtn.addEventListener('click', () => showPanel('flashPanel'));
+
+                // Music button
+                musicBtn.addEventListener('click', () => showPanel('musicPanel'));
+
+                // Sticker button
+                stickerBtn.addEventListener('click', () => showPanel('stickerPanel'));
+
+                // Effects button
+                effectsBtn.addEventListener('click', () => showPanel('effectsPanel'));
+
+                // Gallery button
+                galleryBtn.addEventListener('click', function() {
+                    filePicker.click();
+                });
+
+                // File picker
+                filePicker.addEventListener('change', function(e) {
+                    if (e.target.files.length > 0) {
+                        handleFile(e.target.files[0]);
+                    }
+                });
+
+                // Back button in preview
+                backBtn.addEventListener('click', function() {
+                    previewContainer.style.display = 'none';
+                    previewImage.src = '';
+                    previewMedia.src = '';
+
+                    // Stop music if playing
+                    if (currentMusic) {
+                        currentMusic.stop();
+                    }
+                });
+
+                // Add CSRF token helper function
+                function getCookie(name) {
+                    let cookieValue = null;
+                    if (document.cookie && document.cookie !== '') {
+                        const cookies = document.cookie.split(';');
+                        for (let i = 0; i < cookies.length; i++) {
+                            const cookie = cookies[i].trim();
+                            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                                break;
+                            }
+                        }
+                    }
+                    return cookieValue;
+                }
+
+                function getCSRFToken() {
+                    return document.querySelector('meta[name=\"csrf-token\"]').getAttribute('content');
+                }
+
+                // Handle orientation changes
+                window.addEventListener('orientationchange', function() {
+                    // Small delay to allow orientation to complete
+                    setTimeout(initCamera, 300);
+                });
+            }
+
+            // Initialize the app
+            initApp();
+        });
+    </script>
+</body>
+</html>
+

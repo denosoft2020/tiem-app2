@@ -5,32 +5,182 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Social Feed</title>
+    <title>Enhanced Social Feed</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, sans-serif; }
-        body { background: #f0f2f5; color: #1a1a1a; }
-        .feed-container { max-width: 600px; margin: 0 auto; padding: 20px 10px; }
-        .feed-tabs { position: sticky; top: 0; background: white; display: flex; justify-content: center; gap: 20px; padding: 15px 0; z-index: 100; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); border-radius: 12px; margin-bottom: 20px; }
-        .tab-button { display: flex; align-items: center; gap: 8px; color: #65676b; text-decoration: none; padding: 8px 16px; border-radius: 8px; transition: all 0.2s ease; }
-        .tab-button.active { background: #f0f2f5; color: #1a1a1a; }
-        .video-container { background: white; border-radius: 12px; margin-bottom: 20px; position: relative; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); transition: transform 0.2s ease; }
-        .video-wrapper { position: relative; border-radius: 12px 12px 0 0; overflow: hidden; }
-        .video-player { width: 100%; height: 600px; object-fit: cover; background: black; }
-        .action-buttons { position: absolute; right: 15px; bottom: 15px; display: flex; flex-direction: column; gap: 20px; z-index: 2; }
-        .action-button { background: none; border: none; color: white; font-size: 24px; cursor: pointer; display: flex; flex-direction: column; align-items: center; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); transition: transform 0.2s ease; }
-        .action-button.liked { color: #ff3040; }
-        .action-count { font-size: 12px; font-weight: 600; margin-top: 2px; }
-        .video-info { padding: 15px; position: absolute; bottom: 0; left: 0; right: 0; color: white; z-index: 1; }
-        .user-info { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-        .username { color: white; text-decoration: none; font-weight: 600; font-size: 16px; }
-        .follow-btn { background: rgba(255, 255, 255, 0.1); border: none; color: white; padding: 6px 15px; border-radius: 8px; font-weight: 500; cursor: pointer; backdrop-filter: blur(10px); transition: all 0.2s ease; }
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+        }
+        
+        body { 
+            background: #f0f2f5; 
+            color: #1a1a1a; 
+        }
+        
+        .feed-container { 
+            max-width: 600px; 
+            margin: 0 auto; 
+            padding: 15px 10px; 
+            background: #f0f2f5;
+        }
+        
+        .feed-tabs { 
+            position: sticky; 
+            top: 0; 
+            background: white; 
+            display: flex; 
+            justify-content: center; 
+            gap: 5px; 
+            padding: 10px 0; 
+            z-index: 70; 
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); 
+            border-radius: 12px; 
+            margin-bottom: 20px; 
+        }
+        
+        .tab-button { 
+            display: flex; 
+            align-items: center; 
+            gap: 5px; 
+            color: #65676b; 
+            text-decoration: none; 
+            padding: 4px 8px; 
+            border-radius: 8px; 
+            transition: all 0.2s ease; 
+        }
+        
+        .tab-button.active { 
+            background: #f0f2f5; 
+            color: #1a1a1a; 
+        }
+
+        /* Video container with improved sizing */
+        .video-container { 
+            background: rgb(15, 15, 15); 
+            border-radius: 12px; 
+            margin-bottom: 20px; 
+            position: relative; 
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); 
+            transition: transform 0.2s ease; 
+            overflow: hidden;
+        }
+        
+        .video-container .video-info { 
+            padding: 15px; 
+            background: rgb(254, 253, 253); 
+            border-radius: 0px 0px 12px 12px; 
+            width: 100%;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);  
+        }
+
+        /* Responsive video wrapper */
+        .video-wrapper { 
+            position: relative; 
+            width: 100%; 
+            padding-top: 125%; /* 4:5 aspect ratio for mobile */
+            background: black; 
+            overflow: hidden;
+        }
+        
+        /* Video player that fills container */
+        .video-player { 
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .action-buttons { 
+            position: absolute; 
+            right: 15px; 
+            bottom: 15px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 20px; 
+            z-index: 2; 
+        }
+        
+        .action-button { 
+            background: none; 
+            border: none; 
+            color: white; 
+            font-size: 24px; 
+            cursor: pointer; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); 
+            transition: transform 0.2s ease; 
+        }
+        
+        .action-button.liked { 
+            color: #ff3040; 
+        }
+        
+        .action-count { 
+            font-size: 12px; 
+            font-weight: 600; 
+            margin-top: 2px; 
+            color: white;
+        }
+        
+        .video-info { 
+            padding: 15px; 
+            position: relative;
+        }
+        
+        .user-info { 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            margin-bottom: 12px; 
+        }
+        
+        .user-details {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .username { 
+            color: #262626; 
+            text-decoration: none; 
+            font-weight: 600; 
+            font-size: 16px; 
+        }
+        
+        /* Improved follow button */
+        .follow-btn { 
+            background: #3897f0; 
+            color: white; 
+            border: none; 
+            border-radius: 20px; 
+            padding: 6px 15px; 
+            font-weight: 600; 
+            cursor: pointer; 
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.3s ease;
+        }
+        
+        .follow-btn.following { 
+            background: #efefef; 
+            color: #262626; 
+            padding: 6px 10px;
+        }
+        
         .profile-pic {
             width: 40px;
             height: 40px;
             border-radius: 50%;
             object-fit: cover;
-            border: 2px solid white;
+            border: 2px solid #3897f0;
         }
 
         .default-profile-pic {
@@ -43,28 +193,95 @@
             align-items: center;
             justify-content: center;
             font-weight: bold;
-            border: 2px solid white;
+            border: 2px solid #3897f0;
         }
-
+        
         .video-caption {
             margin-top: 10px;
             font-size: 14px;
+            line-height: 1.4;
         }
-
+        
+        /* Tags and mentions styling */
+        .hashtag, .mention {
+            color: #3897f0;
+            font-weight: 500;
+            font-size: 14px;
+            text-decoration: none;
+        }
+        
+        .hashtag:hover, .mention:hover {
+            text-decoration: underline;
+        }
+        
+        .location {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            text-decoration: none;
+            color: #8e8e8e;
+            margin-top: 8px;
+            font-size: 13px;
+        }
+        
+        .location:hover {
+            text-decoration: underline;
+        }
+        
         .video-meta {
             display: flex;
             gap: 15px;
             margin-top: 8px;
             font-size: 12px;
             opacity: 0.9;
+            color: #8e8e8e;
         }
-        .gradient-overlay { position: absolute; bottom: 0; left: 0; right: 0; height: 50%; background: linear-gradient(transparent, rgba(0,0,0,0.7)); }
-        .loading-spinner { display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); }
-        .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
+        .view-count {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            color: white;
+            font-size: 12px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 4px 8px;
+            border-radius: 12px;
+            z-index: 2;
+        }
         
-        /* Comment Section */
+        .gradient-overlay { 
+            position: absolute; 
+            bottom: 0; 
+            left: 0; 
+            right: 0; 
+            height: 50%; 
+            background: linear-gradient(transparent, rgba(0,0,0,0.7)); 
+            z-index: 1;
+        }
+        
+        .loading-spinner { 
+            display: none; 
+            position: fixed; 
+            bottom: 20px; 
+            left: 50%; 
+            transform: translateX(-50%); 
+        }
+        
+        .spinner { 
+            width: 40px; 
+            height: 40px; 
+            border: 4px solid #f3f3f3; 
+            border-top: 4px solid #3498db; 
+            border-radius: 50%; 
+            animation: spin 1s linear infinite; 
+        }
+        
+        @keyframes spin { 
+            0% { transform: rotate(0deg); } 
+            100% { transform: rotate(360deg); } 
+        }
+        
+        /* Comment Section - Enhanced */
         .comment-section {
             display: none;
             position: fixed;
@@ -94,6 +311,7 @@
             border: none;
             font-size: 1.5rem;
             cursor: pointer;
+            color: #666;
         }
         
         .comments-container {
@@ -103,6 +321,7 @@
         .comment {
             display: flex;
             margin-bottom: 15px;
+            position: relative;
         }
         
         .comment-user-pic {
@@ -110,6 +329,8 @@
             height: 32px;
             border-radius: 50%;
             margin-right: 10px;
+            object-fit: cover;
+            border: 1px solid #ddd;
         }
         
         .comment-content {
@@ -119,15 +340,43 @@
         .comment-username {
             font-weight: bold;
             margin-bottom: 5px;
+            color: #262626;
+            text-decoration: none;
+            display: block;
         }
         
         .comment-text {
             margin-bottom: 5px;
+            line-height: 1.4;
         }
         
         .comment-time {
             font-size: 12px;
             color: #666;
+        }
+        
+        .comment-actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 5px;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .comment-action {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        
+        .comment-action:hover {
+            color: #3897f0;
+        }
+        
+        .reply-container {
+            margin-left: 40px;
+            margin-top: 10px;
+            padding-left: 10px;
+            border-left: 2px solid #ddd;
         }
         
         .add-comment {
@@ -144,6 +393,7 @@
             border-radius: 20px;
             border: 1px solid #ddd;
             outline: none;
+            font-size: 14px;
         }
         
         .post-comment-btn {
@@ -154,25 +404,165 @@
             padding: 0 20px;
             cursor: pointer;
             font-weight: 600;
+            transition: background 0.2s;
         }
         
-        .no-comments {
+        .post-comment-btn:hover {
+            background: #2680d9;
+        }
+        
+        /* Search Section */
+        .search-container {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            z-index: 200;
+            padding: 15px;
+            border-radius: 0 0 12px 12px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        
+        .search-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .close-search {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
+        }
+        
+        .search-input-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .search-input {
+            flex: 1;
+            padding: 10px 15px;
+            border-radius: 20px;
+            border: 1px solid #ddd;
+            outline: none;
+            font-size: 14px;
+        }
+        
+        .search-results {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .search-result-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-radius: 8px;
+            transition: background 0.2s ease;
+            cursor: pointer;
+        }
+        
+        .search-result-item:hover {
+            background: #f5f5f5;
+        }
+        
+        .search-result-pic {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: 10px;
+        }
+        
+        .search-result-info {
+            flex: 1;
+        }
+        
+        .search-result-username {
+            font-weight: bold;
+        }
+        
+        .search-result-name {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .no-results {
             text-align: center;
             color: #888;
             padding: 20px 0;
         }
+        
+        .no-content {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-size: 16px;
+            background: white;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+        
+        .no-media {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f0f0f0;
+            color: #666;
+            font-size: 16px;
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 30px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1001;
+            display: none;
+            animation: fadeInOut 3s ease-in-out;
+        }
+        
+        @keyframes fadeInOut {
+            0% { opacity: 0; top: 10px; }
+            10% { opacity: 1; top: 20px; }
+            90% { opacity: 1; top: 20px; }
+            100% { opacity: 0; top: 10px; }
+        }
     </style>
 </head>
 <body>
+    <div class="notification" id="notification"></div>
+    
     <script>
         const CURRENT_USER_ID = "{{ request.user.id }}";
         const CURRENT_USER_USERNAME = "{{ request.user.username }}";
         const CURRENT_USER_PROFILE_PIC = "{% if request.user.profile.profile_picture %}{{ request.user.profile.profile_picture.url }}{% endif %}";
-         const BASE_URL = "{{ request.scheme }}://{{ request.get_host }}";
+        const BASE_URL = "{{ request.scheme }}://{{ request.get_host }}";
     </script>
 
     <div class="feed-container">
-        <div class="feed-tabs">
+        <div class="feed-tabs" id="feedTabs">
             <a href="#" class="tab-button active" data-tab="reel">
                 <i class="fas fa-compass"></i> Reel
             </a>
@@ -182,6 +572,26 @@
             <a href="#" class="tab-button" data-tab="live">
                 <i class="fas fa-signal"></i> Live
             </a>
+            <button id="searchToggle" class="tab-button" title="Search">
+                <i class="fas fa-search"></i>
+            </button>
+        </div>
+
+        <!-- Search Container -->
+        <div class="search-container" id="searchContainer">
+            <div class="search-header">
+                <h3>Search</h3>
+                <button class="close-search" id="closeSearch">&times;</button>
+            </div>
+            
+            <div class="search-input-container">
+                <input type="text" class="search-input" id="searchInput" placeholder="Search users or content...">
+                <button class="post-comment-btn" id="performSearch">Search</button>
+            </div>
+            
+            <div class="search-results" id="searchResults">
+                <div class="no-results">Search for users or content</div>
+            </div>
         </div>
 
         <div class="video-feed" id="videoFeed"></div>
@@ -214,6 +624,7 @@
         let activeTab = 'reel';
         let hasMore = true;
         let currentPostId = null;
+        let videoObservers = [];
 
         // Get CSRF token from cookies
         function getCSRFToken() {
@@ -221,15 +632,28 @@
             return cookie ? cookie[1] : null;
         }
 
-        function getProfilePicture(profile) {
-            if (profile && profile.profile_picture) {
-                // Ensure we have the full URL
-                if (profile.profile_picture.startsWith('http')) {
-                    return profile.profile_picture;
-                }
-                return BASE_URL + profile.profile_picture;
-            }
-            return null;
+        // Show notification
+        function showNotification(message) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.style.display = 'block';
+            
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 3000);
+        }
+
+        // Parse caption for hashtags and mentions
+        function parseCaption(caption) {
+            if (!caption) return '';
+            
+            // Replace hashtags
+            let parsed = caption.replace(/#(\w+)/g, '<a href="/hashtag/$1" class="hashtag">#$1</a>');
+            
+            // Replace mentions
+            parsed = parsed.replace(/@(\w+)/g, '<a href="/profile/$1" class="mention">@$1</a>');
+            
+            return parsed;
         }
 
         // Fetch posts from backend API
@@ -260,56 +684,79 @@
                     hasMore = !!data.next;
                 } else {
                     hasMore = false;
+                    // Show "no content" message if it's the first page
+                    if (page === 1) {
+                        const feed = document.getElementById('videoFeed');
+                        let message = '';
+                        if (tab === 'reel') {
+                            message = 'No posts available yet';
+                        } else if (tab === 'following') {
+                            message = 'No posts from people you follow yet';
+                        } else if (tab === 'live') {
+                            message = 'No live streams at the moment';
+                        }
+                        feed.innerHTML = `<div class="no-content">${message}</div>`;
+                    }
                 }
             } catch (error) {
                 console.error('Error fetching posts:', error);
-                alert('Failed to load posts. Please try again.');
+                showNotification('Failed to load posts. Please try again.');
             } finally {
                 isLoading = false;
                 document.querySelector('.loading-spinner').style.display = 'none';
             }
         }
 
-        // Render posts dynamically
+        // Render posts dynamically with improved layout
         function renderPosts(posts) {
             const feed = document.getElementById('videoFeed');
             
             posts.forEach(post => {
                 const isCurrentUser = post.user.id.toString() === CURRENT_USER_ID;
-                const profilePic = post.user.profile?.profile_picture ? 
-                    `<img src="${post.user.profile.profile_picture}" class="profile-pic" alt="@${post.user.username}">` : 
+                const profilePic = post.user.profile_picture ? 
+                    `<img src="${post.user.profile_picture}" class="profile-pic" alt="@${post.user.username}">` : 
                     `<div class="default-profile-pic">${post.user.username[0].toUpperCase()}</div>`;
+                
+                // Format created_at date
+                const postDate = new Date(post.created_at);
+                const formattedDate = postDate.toLocaleDateString([], {
+                    month: 'short',
+                    day: 'numeric'
+                });
+                
+                // Parse caption for hashtags and mentions
+                const parsedCaption = parseCaption(post.caption);
                 
                 const postElement = document.createElement('div');
                 postElement.className = 'video-container';
                 postElement.innerHTML = `
                     <div class="video-wrapper">
-                        ${post.content_type === 'video' ? 
-                            `<video controls class="video-player">
-                                <source src="${post.media_file}" type="video/mp4">
-                            </video>` : 
-                            `<img src="${post.media_file}" class="video-player">`
+                        ${post.media_file ? 
+                            (post.content_type === 'video' ? 
+                                `<video class="video-player" loop playsinline>
+                                    <source src="${post.media_file}" type="video/mp4">
+                                </video>` : 
+                                `<img src="${post.media_file}" class="video-player">`
+                            ) :
+                            `<div class="no-media">Media not available</div>`
                         }
                         <div class="gradient-overlay"></div>
+                        <div class="view-count"><i class="fas fa-eye"></i> ${post.views.toLocaleString()} views</div>
                     </div>
 
                     <div class="action-buttons">
-                        <div class="profile-action">
-                            <div class="profile-pic-container">
-                                <a href="/profile/${post.user.username}">
-                                    ${profilePic}
-                                </a>
-                            </div>
-                        </div>
-
                         <button class="action-button like-button ${post.is_liked ? 'liked' : ''}" data-post-id="${post.id}">
                             <i class="${post.is_liked ? 'fas' : 'far'} fa-heart"></i>
-                            <span class="action-count">${post.likes_count}</span>
+                            <span class="action-count">${post.likes_count.toLocaleString()}</span>
                         </button>
 
                         <button class="action-button comment-button" data-post-id="${post.id}">
                             <i class="far fa-comment-dots"></i>
-                            <span class="action-count">${post.comments_count}</span>
+                            <span class="action-count">${post.comments_count.toLocaleString()}</span>
+                        </button>
+
+                        <button class="action-button download-button" data-post-id="${post.id}" data-media-url="${post.media_file}" title="Download">
+                            <i class="fas fa-download"></i>
                         </button>
 
                         <button class="action-button share-button" data-post-id="${post.id}">
@@ -319,27 +766,56 @@
 
                     <div class="video-info">
                         <div class="user-info">
-                            <a href="/profile/${post.user.username}" class="username">@${post.user.username}</a>
+                            <div class="user-details">
+                                <a href="/profile/${post.user.username}">
+                                    ${profilePic}
+                                </a>
+                                <a href="/profile/${post.user.username}" class="username">@${post.user.username}</a>
+                            </div>
                             ${isCurrentUser ? '' : `
                                 <button class="follow-btn ${post.user.is_following ? 'following' : ''}" 
                                         data-user-id="${post.user.id}">
-                                    ${post.user.is_following ? 'Following' : 'Follow'}
+                                    ${post.user.is_following ? '<i class="fas fa-check"></i> Following' : 'Follow'}
                                 </button>
                             `}
                         </div>
-                        <p class="video-caption">${post.caption || ''}</p>
+                        <p class="video-caption">${parsedCaption || ''}</p>
+                        ${post.location ? `<a href="#" class="location"><i class="fas fa-map-marker-alt"></i> ${post.location}</a>` : ''}
                         <div class="video-meta">
-                            <span class="view-count"><i class="fas fa-eye"></i> ${post.views} views</span>
-                            <span class="post-time">${post.created_at}</span>
+                            <span class="post-time">${formattedDate}</span>
                         </div>
                     </div>
                 `;
                 
                 feed.appendChild(postElement);
+                
+                // Set up autoplay for video
+                if (post.media_file && post.content_type === 'video') {
+                    setupVideoAutoplay(postElement);
+                }
             });
         }
 
-        // Load comments for a post
+        // Set up video autoplay
+        function setupVideoAutoplay(postElement) {
+            const video = postElement.querySelector('video');
+            if (!video) return;
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        video.play().catch(e => console.log("Autoplay prevented:", e));
+                    } else {
+                        video.pause();
+                    }
+                });
+            }, { threshold: 0.5 });
+            
+            observer.observe(postElement);
+            videoObservers.push(observer);
+        }
+
+        // Load comments for a post with replies
         async function loadComments(postId) {
             try {
                 document.getElementById('commentsContainer').innerHTML = '<div class="no-comments">Loading comments...</div>';
@@ -351,11 +827,11 @@
                 renderComments(comments);
             } catch (error) {
                 console.error('Error loading comments:', error);
-                document.getElementById('commentsContainer').innerHTML = '<div class="no-comments">Failed to load comments</div>';
+                document.getElementById('commentsContainer').innerHTML = '<div class="no-results">Failed to load comments</div>';
             }
         }
 
-        // Render comments in the comment section
+        // Render comments with profile pictures and reply functionality
         function renderComments(comments) {
             const container = document.getElementById('commentsContainer');
             container.innerHTML = '';
@@ -371,22 +847,36 @@
                 
                 // Format timestamp
                 const commentDate = new Date(comment.created_at);
-                const formattedTime = commentDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const formattedTime = commentDate.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
                 
-                const profilePic = comment.user.profile?.profile_picture ? 
-                    `<img src="${comment.user.profile.profile_picture}" class="comment-user-pic" alt="@${comment.user.username}">` : 
-                    `<div class="comment-user-pic default-profile-pic small">${comment.user.username[0].toUpperCase()}</div>`;
+                const profilePic = comment.user.profile_picture ? 
+                    `<img src="${comment.user.profile_picture}" class="comment-user-pic" alt="@${comment.user.username}">` :
+                    `<div class="comment-user-pic default-profile-pic">${comment.user.username[0].toUpperCase()}</div>`;
                 
                 commentElement.innerHTML = `
-                    ${profilePic}
+                    <a href="/profile/${comment.user.username}">
+                        ${profilePic}
+                    </a>
                     <div class="comment-content">
-                        <div class="comment-username">@${comment.user.username}</div>
+                        <a href="/profile/${comment.user.username}" class="comment-username">@${comment.user.username}</a>
                         <div class="comment-text">${comment.text}</div>
-                        <div class="comment-time">${formattedTime}</div>
+                        <div class="comment-actions">
+                            <span class="comment-time">${formattedTime}</span>
+                            <span class="comment-action like-comment"><i class="far fa-heart"></i> ${comment.likes || 0}</span>
+                            <span class="comment-action reply-btn" data-username="${comment.user.username}">Reply</span>
+                        </div>
                     </div>
                 `;
                 
                 container.appendChild(commentElement);
+                
+                // Add event listener for reply button
+                const replyBtn = commentElement.querySelector('.reply-btn');
+                replyBtn.addEventListener('click', function() {
+                    const username = this.getAttribute('data-username');
+                    document.getElementById('commentInput').value = `@${username} `;
+                    document.getElementById('commentInput').focus();
+                });
             });
             
             // Scroll to bottom of comments
@@ -418,11 +908,87 @@
                 const commentButton = document.querySelector(`.comment-button[data-post-id="${postId}"]`);
                 if (commentButton) {
                     const countSpan = commentButton.querySelector('.action-count');
-                    countSpan.textContent = parseInt(countSpan.textContent) + 1;
+                    countSpan.textContent = (parseInt(countSpan.textContent.replace(/,/g, '')) + 1).toLocaleString();
                 }
+                
+                showNotification('Comment posted successfully!');
             } catch (error) {
                 console.error('Error posting comment:', error);
-                alert(`Error: ${error.message}`);
+                showNotification(`Error: ${error.message}`);
+            }
+        }
+
+        // Search function
+        async function performSearch(query) {
+            try {
+                document.getElementById('searchResults').innerHTML = '<div class="no-results">Searching...</div>';
+                
+                const response = await fetch(`/api/search/?q=${encodeURIComponent(query)}`);
+                if (!response.ok) throw new Error('Failed to search');
+                
+                const results = await response.json();
+                renderSearchResults(results);
+            } catch (error) {
+                console.error('Error searching:', error);
+                document.getElementById('searchResults').innerHTML = '<div class="no-results">Failed to load results</div>';
+            }
+        }
+
+        // Render search results
+        function renderSearchResults(results) {
+            const container = document.getElementById('searchResults');
+            container.innerHTML = '';
+            
+            if (results.length === 0) {
+                container.innerHTML = '<div class="no-results">No results found</div>';
+                return;
+            }
+            
+            results.forEach(result => {
+                const resultElement = document.createElement('div');
+                resultElement.className = 'search-result-item';
+                
+                const profilePic = result.profile_picture ? 
+                    `<img src="${result.profile_picture}" class="search-result-pic" alt="@${result.username}">` : 
+                    `<div class="search-result-pic default-profile-pic">${result.username[0].toUpperCase()}</div>`;
+                
+                resultElement.innerHTML = `
+                    ${profilePic}
+                    <div class="search-result-info">
+                        <div class="search-result-username">@${result.username}</div>
+                        ${result.full_name ? `<div class="search-result-name">${result.full_name}</div>` : ''}
+                    </div>
+                `;
+                
+                // Make result clickable
+                resultElement.addEventListener('click', () => {
+                    window.location.href = `/profile/${result.username}`;
+                });
+                
+                container.appendChild(resultElement);
+            });
+        }
+
+        // Download media file
+        async function downloadMedia(mediaUrl, filename) {
+            try {
+                // Create a temporary anchor element
+                const a = document.createElement('a');
+                a.href = mediaUrl;
+                
+                // Extract filename from URL if not provided
+                const downloadName = filename || mediaUrl.split('/').pop();
+                a.download = downloadName;
+                
+                // Trigger the download
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                
+                showNotification('Download started');
+            } catch (error) {
+                console.error('Error downloading file:', error);
+                showNotification('Failed to download file. Please try again.');
             }
         }
 
@@ -440,7 +1006,7 @@
                 if (text && currentPostId) {
                     postComment(currentPostId, text);
                 } else if (!text) {
-                    alert('Please enter a comment');
+                    showNotification('Please enter a comment');
                 }
             });
             
@@ -450,6 +1016,38 @@
                     const text = e.target.value.trim();
                     if (text && currentPostId) {
                         postComment(currentPostId, text);
+                    }
+                }
+            });
+
+            // Search functionality
+            document.getElementById('searchToggle').addEventListener('click', (e) => {
+                e.preventDefault();
+                document.getElementById('searchContainer').style.display = 'block';
+                document.getElementById('searchInput').focus();
+            });
+
+            document.getElementById('closeSearch').addEventListener('click', () => {
+                document.getElementById('searchContainer').style.display = 'none';
+            });
+
+            document.getElementById('performSearch').addEventListener('click', () => {
+                const query = document.getElementById('searchInput').value.trim();
+                if (query) {
+                    performSearch(query);
+                } else {
+                    document.getElementById('searchResults').innerHTML = '<div class="no-results">Please enter a search term</div>';
+                }
+            });
+
+            // Allow Enter key to search
+            document.getElementById('searchInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    const query = e.target.value.trim();
+                    if (query) {
+                        performSearch(query);
+                    } else {
+                        document.getElementById('searchResults').innerHTML = '<div class="no-results">Please enter a search term</div>';
                     }
                 }
             });
@@ -465,13 +1063,21 @@
         // Tab switching
         document.querySelectorAll('.tab-button').forEach(tab => {
             tab.addEventListener('click', function(e) {
+                if (this.id === 'searchToggle') return;
+                
                 e.preventDefault();
                 activeTab = this.dataset.tab;
                 currentPage = 1;
                 hasMore = true;
                 document.querySelectorAll('.tab-button').forEach(t => t.classList.remove('active'));
                 this.classList.add('active');
+                document.getElementById('videoFeed').innerHTML = '';
                 fetchPosts(1, activeTab);
+                
+                // Update URL without reloading
+                const url = new URL(window.location);
+                url.searchParams.set('tab', activeTab);
+                window.history.pushState({}, '', url);
             });
         });
 
@@ -501,14 +1107,17 @@
                         if (result.liked) {
                             icon.classList.remove('far');
                             icon.classList.add('fas');
+                            showNotification('Post liked');
                         } else {
                             icon.classList.remove('fas');
                             icon.classList.add('far');
+                            showNotification('Like removed');
                         }
-                        countSpan.textContent = result.likes_count;
+                        countSpan.textContent = result.likes_count.toLocaleString();
                     }
                 } catch (error) {
                     console.error('Error liking post:', error);
+                    showNotification('Error updating like');
                 }
             }
 
@@ -549,11 +1158,18 @@
 
                     if (response.ok) {
                         const result = await response.json();
+                        
+                        // Update UI
                         button.classList.toggle('following');
-                        button.textContent = result.is_following ? 'Following' : 'Follow';
+                        button.innerHTML = result.is_following ? 
+                            '<i class="fas fa-check"></i> Following' : 
+                            'Follow';
+                        
+                        showNotification(result.is_following ? 'Followed user' : 'Unfollowed user');
                     }
                 } catch (error) {
                     console.error('Error following user:', error);
+                    showNotification('Error updating follow status');
                 }
             }
 
@@ -571,11 +1187,23 @@
                         });
                     } else {
                         await navigator.clipboard.writeText(shareUrl);
-                        alert('Link copied to clipboard!');
+                        showNotification('Link copied to clipboard!');
                     }
                 } catch (error) {
                     console.log('Share cancelled');
                 }
+            }
+
+            // Download functionality
+            if (e.target.closest('.download-button')) {
+                const button = e.target.closest('.download-button');
+                const mediaUrl = button.dataset.mediaUrl;
+                
+                // Extract filename from URL
+                const filename = mediaUrl.split('/').pop();
+                
+                // Trigger download
+                downloadMedia(mediaUrl, filename);
             }
         });
     </script>

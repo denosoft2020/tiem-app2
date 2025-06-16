@@ -32,7 +32,7 @@
     </svg>
               
         </div>
-        {% if 'friends' in request.path %}<span class="nav-label">friends</span>{% endif %}
+        {% if 'friends' in request.path %}<span class="nav-label">Search</span>{% endif %}
     </a>
 
     <!-- Center Upload -->
@@ -77,16 +77,17 @@
     left: 0;
     right: 0;
     height: 72px;
-    background: rgb(248, 245, 245);
+    background: rgb(227, 214, 214);
     display: flex;
     justify-content: space-around;
     align-items: flex-end;
-    border-top-left-radius: 20px;
-    border-top-right-radius: 20px;
+    border-top-left-radius: 40px;
+    border-top-right-radius: 40px;
+    border-radius: 40px 40px 40px 40px;
     box-shadow: 0 -4px 12px rgba(238, 231, 231, 0.08);
     z-index: 1000;
     padding: 0 8px;
-    padding-bottom: 8px;
+    padding-bottom: 5px;
 }
 
 .nav-item {

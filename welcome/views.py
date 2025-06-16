@@ -5,11 +5,11 @@ from django.contrib.auth import authenticate, login
 from django.contrib import messages
 from django.forms import inlineformset_factory
 from django.contrib.auth.forms import UserCreationForm
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 import json
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
-from .models import Profile, Post, Notification, Conversation, Message, LiveStream, UserInteraction, Hashtag, Like, Comment
+from .models import Profile, Post, Notification, Conversation, Message, LiveStream, UserInteraction, Hashtag, Like, Comment, User 
 from .forms import ProfileUpdateForm, ProfilePictureForm
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -26,7 +26,8 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 from rest_framework.renderers import JSONRenderer, TemplateHTMLRenderer
 from rest_framework.views import APIView
-from rest_framework.decorators import api_view, action
+from rest_framework.decorators import api_view, action, permission_classes
+from rest_framework.permissions import IsAuthenticated
 from .serializers import NotificationSerializer, ConversationSerializer, MessageSerializer
 from django.contrib.auth import get_user_model
 from django.db.models import Q
@@ -40,6 +41,8 @@ from .serializers import (
 )
 from .utils import get_feed_posts
 import re
+import logging
+logger = logging.getLogger(__name__)
 #from agora_token_builder.RtcTokenBuilder import Role
 
 
@@ -105,6 +108,7 @@ def profile_view(request, username):
     context = {
         'user': user,
         'profile': profile,
+        'profile_picture': profile.profile_picture.url if profile.profile_picture else None,
         'posts_count': posts.count(),
         'followers_count': profile.followed_by.count(),
         'following_count': profile.follows.count(),
@@ -350,6 +354,7 @@ def upload_page(request):
     return render(request, 'upload.html')
 
 @require_POST
+@login_required
 def upload_media(request):
     try:
         # Verify file exists in request
@@ -357,32 +362,58 @@ def upload_media(request):
             return JsonResponse({'status': 'error', 'message': 'No file provided'}, status=400)
         
         uploaded_file = request.FILES['file']
-        file_type = request.POST.get('file_type', 'unknown')
+        file_type = request.POST.get('file_type', 'image')
         caption = request.POST.get('caption', '')
         hashtags = request.POST.get('hashtags', '')
         mentions = request.POST.get('mentions', '')
         location = request.POST.get('location', '')
 
-        # Process file and metadata
-        uploaded_file = request.FILES['file']
+        # Determine content type based on file MIME type
+        if uploaded_file.content_type.startswith('video/'):
+            content_type = 'video'
+        elif uploaded_file.content_type.startswith('image/'):
+            content_type = 'image'
+        else:
+            content_type = file_type  # Fallback to provided type
 
-        # Save file
-        file_path = default_storage.save(f'uploads/{uploaded_file.name}', uploaded_file)
-        
+         # Create the Post object
+        post = Post.objects.create(
+            user=request.user,
+            content_type=content_type,
+            media_file=uploaded_file,
+            caption=caption,
+            location=location
+        )
+         # Process hashtags
+        for tag in hashtags.split():
+            if tag.startswith('#'):
+                tag = tag[1:]
+            if tag:
+                hashtag, created = Hashtag.objects.get_or_create(name=tag.lower())
+                post.hashtags.add(hashtag)
+
+        # Process mentions
+        for username in mentions.split():
+            if username.startswith('@'):
+                username = username[1:]
+            if username:
+                try:
+                    user = User.objects.get(username=username)
+                    post.mentions.add(user)
+                except User.DoesNotExist:
+                    pass
+
+
         return JsonResponse({
             'status': 'success',
-            'message': 'File uploaded successfully',
-            'path': file_path,
-            'file_type': file_type,
-            'metadata': {
-                'caption': caption,
-                'hashtags': hashtags.split(),
-                'mentions': mentions.split(),
-                'location': location
-            }
+            'message': 'Post created successfully',
+            'post_id': post.id,
+            
         })
     except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 #for mentions and hashtags on upload page
 def get_users(request):
@@ -423,8 +454,6 @@ class FeedPagination(PageNumberPagination):
         })
 
 class FeedViewSet(viewsets.ViewSet):
-    
-
     permission_classes = [permissions.IsAuthenticated]
     pagination_class = FeedPagination
     
@@ -432,14 +461,120 @@ class FeedViewSet(viewsets.ViewSet):
         tab = request.query_params.get('tab', 'reel')
         page = int(request.query_params.get('page', 1))
         
-        posts = get_feed_posts(request.user, tab)
+        if tab == 'reel':
+            # Show all posts ordered by creation date
+            posts = Post.objects.all().order_by('-created_at')
+        elif tab == 'following':
+            # Show posts from followed users
+            following = request.user.profile.follows.all()
+            followed_users = [profile.user for profile in following]
+            posts = Post.objects.filter(user__profile__in=following).order_by('-created_at')
+        elif tab == 'live':
+            # Show live streams (we'll implement this later)
+            posts = Post.objects.none()  # Empty for now
+        
+        #prefetch related data to optimize queries
+        posts = posts.select_related('user__profile').prefetch_related('likes', 'comments')    
         paginator = self.pagination_class()
         page_data = paginator.paginate_queryset(posts, request)
         
         serializer = PostSerializer(page_data, many=True, context={'request': request})
         return paginator.get_paginated_response(serializer.data)
+
 def friends(request):
     return render(request, 'friends.html')
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def comprehensive_search(request):
+    try:
+        query = request.GET.get('q', '').strip()
+        type_param = request.GET.get('type', 'all').lower()
+        
+        if not query:
+            return JsonResponse({
+                'users': [],
+                'videos': [],
+                'images': [],
+                'hashtags': []
+            })
+        
+        results = {
+            'users': [],
+            'videos': [],
+            'images': [],
+            'hashtags': []
+        }
+        
+        # Define limits
+        limit_per_type = 5  # when type is 'all'
+        if type_param != 'all':
+            limit_per_type = 20
+        
+        # Search Users - Fixed to use username only
+        if type_param in ['all', 'users']:
+            users = User.objects.filter(
+                username__icontains=query
+            ).distinct().select_related('profile')[:limit_per_type]
+            
+            for user in users:
+                profile = getattr(user, 'profile', None)
+                profile_picture_url = profile.profile_picture.url if profile and profile.profile_picture else None
+                
+                results['users'].append({
+                    'id': user.id,
+                    'username': user.username,
+                    'profile_picture': request.build_absolute_uri(profile_picture_url) if profile_picture_url else None
+                })
+        
+        # Search Videos - Fixed content_type filter
+        if type_param in ['all', 'videos']:
+            videos = Post.objects.filter(
+                content_type='video',
+                caption__icontains=query
+            ).distinct().select_related('user')[:limit_per_type]
+            
+            for video in videos:
+                media_url = video.media_file.url if video.media_file else None
+                results['videos'].append({
+                    'id': video.id,
+                    'caption': video.caption,
+                    'user': video.user.username,
+                    'media_url': request.build_absolute_uri(media_url) if media_url else None
+                })
+        
+        # Search Images - Fixed content_type filter
+        if type_param in ['all', 'images']:
+            images = Post.objects.filter(
+                content_type='image',
+                caption__icontains=query
+            ).distinct().select_related('user')[:limit_per_type]
+            
+            for image in images:
+                media_url = image.media_file.url if image.media_file else None
+                results['images'].append({
+                    'id': image.id,
+                    'caption': image.caption,
+                    'user': image.user.username,
+                    'media_url': request.build_absolute_uri(media_url) if media_url else None
+                })
+        
+        # Search Hashtags
+        if type_param in ['all', 'hashtags']:
+            hashtags = Hashtag.objects.filter(name__icontains=query).distinct()[:limit_per_type]
+            
+            for hashtag in hashtags:
+                results['hashtags'].append({
+                    'id': hashtag.id,
+                    'name': hashtag.name,
+                    'count': hashtag.count
+                })
+        
+        return JsonResponse(results)
+    
+    except Exception as e:
+        logger.exception("Error in comprehensive_search")
+        return JsonResponse({'error': str(e)}, status=500)
 
 
 
@@ -564,6 +699,54 @@ def feed(request):
         'posts': posts,
         'active_tab': active_tab
     })
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def search_view(request):
+    query = request.GET.get('q', '').strip()
+    if not query:
+        return JsonResponse([], safe=False)
+    
+    # Search users by username or full name
+    users = User.objects.filter(
+        Q(username__icontains=query) | 
+        Q(Profile__full_name__icontains=query)
+    ).select_related('Profile')[:20]  # Limit results
+    
+    results = []
+    for user in users:
+        results.append({
+            'username': user.username,
+            'full_name': user.Profile.full_name if hasattr(user, 'Profile') else '',
+            'profile_picture': user.Profile.profile_picture.url if hasattr(user, 'Profile') and user.Profile.profile_picture else None
+        })
+    
+    return JsonResponse(results, safe=False)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def download_media(request, post_id):
+    try:
+        post = Post.objects.get(id=post_id)
+        if not post.media_file:
+            return HttpResponse('File not found', status=404)
+        
+        # Check if user has permission to download
+        if not (post.user == request.user or post.is_public):
+            return HttpResponse('Permission denied', status=403)
+        
+        file_path = post.media_file.path
+        if not os.path.exists(file_path):
+            return HttpResponse('File not found', status=404)
+        
+        with open(file_path, 'rb') as f:
+            response = HttpResponse(f.read(), content_type='application/octet-stream')
+            response['Content-Disposition'] = f'attachment; filename="{os.path.basename(file_path)}"'
+            return response
+            
+    except Post.DoesNotExist:
+        return HttpResponse('Post not found', status=404)
+
 
 def live(request):
     # Get users who are currently live

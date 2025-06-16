@@ -1,36 +1,512 @@
 {% include '_navbar.html' %}
-{%load static%}
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Friends</title>
-    <link rel="stylesheet" href="friends.css">
-    <script defer src="friends.js"></script>
+    <title>Search</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f8f9fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-top: 20px;
+        }
+        
+        h2 {
+            color: #3897f0;
+            margin-bottom: 20px;
+            font-size: 2rem;
+        }
+        
+        .search-container {
+            display: flex;
+            margin-top: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        #searchInput {
+            flex: 1;
+            padding: 15px 20px;
+            border: 2px solid #ddd;
+            border-radius: 30px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        
+        #searchInput:focus {
+            border-color: #3897f0;
+        }
+        
+        #searchButton {
+            padding: 0 25px;
+            background: #3897f0;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            margin-left: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        
+        #searchButton:hover {
+            background: #2876c0;
+        }
+        
+        .tabs {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #eee;
+            flex-wrap: wrap;
+        }
+        
+        .tab {
+            padding: 12px 25px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            color: #999;
+            position: relative;
+            margin: 0 5px;
+            transition: color 0.3s;
+        }
+        
+        .tab.active {
+            color: #3897f0;
+            font-weight: bold;
+        }
+        
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: #3897f0;
+        }
+        
+        #searchResults {
+            min-height: 400px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            padding: 20px;
+        }
+        
+        .placeholder {
+            text-align: center;
+            padding: 50px 0;
+            color: #999;
+            font-size: 18px;
+        }
+        
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        
+        .result-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .result-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+        }
+        
+        .result-card img {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            display: block;
+        }
+        
+        .result-card .info {
+            padding: 15px;
+        }
+        
+        .result-card h3 {
+            margin: 0 0 5px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        .result-card p {
+            margin: 0;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .user-card {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+        }
+        
+        .user-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: 15px;
+            background-color: #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+            font-size: 24px;
+        }
+        
+        .hashtag-card {
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .hashtag-card h3 {
+            color: #003569;
+            font-size: 18px;
+            margin: 0;
+        }
+        
+        .hashtag-card p {
+            color: #999;
+            margin: 5px 0 0;
+        }
+        
+        /* Loading spinner */
+        .loader {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(56, 151, 240, 0.2);
+            border-top: 4px solid #3897f0;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loader p {
+            color: #3897f0;
+            font-size: 16px;
+            font-weight: 500;
+        }
+        
+        .error-message {
+            text-align: center;
+            padding: 30px;
+            color: #e74c3c;
+            background-color: #fdeded;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 50px 0;
+            color: #999;
+            font-size: 18px;
+        }
+        
+        /* Mobile optimizations */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .search-container {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            #searchButton {
+                margin-left: 0;
+                padding: 12px;
+            }
+            
+            .tabs {
+                overflow-x: auto;
+                justify-content: flex-start;
+                padding-bottom: 10px;
+                -ms-overflow-style: none;
+                scrollbar-width: none; /* Firefox */
+                -ms-overflow-style: none; /* IE and Edge */
+            }
+            
+            .tabs::-webkit-scrollbar {
+                display: none; /* Chrome, Safari, Opera */
+            }
+            
+            .tab {
+                padding: 10px 15px;
+                white-space: nowrap;
+            }
+            
+            .results-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+                gap: 15px;
+            }
+            
+            .result-card img {
+                height: 150px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .results-grid {
+                grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            }
+            
+            .result-card img {
+                height: 130px;
+            }
+            
+            .user-card {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .user-avatar {
+                margin-right: 0;
+                margin-bottom: 10px;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h2>People You May Know</h2>
+            <h2>Search</h2>
+            <div class="search-container">
+                <input type="text" id="searchInput" placeholder="Search for users, videos, images, hashtags...">
+                <button id="searchButton">Search</button>
+            </div>
         </header>
-        <main>
-            <div class="suggested-friends" id="suggestedFriends">
-                <p class="placeholder">Loading friend suggestions...</p>
-            </div>
-            <div class="friends-posts" id="friendsPosts">
-                <h3>Friends' Posts</h3>
-                <p class="placeholder">Loading posts...</p>
-            </div>
-        </main>
         
-        <nav class="bottom-nav">
-            <button onclick="window.location.href='feed.html'">🏠 </button>
-            <button onclick="window.location.href='friends.html'" class="active">👥 Friends</button>
-            <button onclick="window.location.href='upload.html'">➕ </button>
-            <button onclick="window.location.href='notifications.html'">🔔 </button>
-            <button onclick="window.location.href='profile.html'">👤 </button>
-        </nav>
+        <div class="tabs">
+            <button class="tab active" data-type="all">All</button>
+            <button class="tab" data-type="users">Users</button>
+            <button class="tab" data-type="videos">Videos</button>
+            <button class="tab" data-type="images">Images</button>
+            <button class="tab" data-type="hashtags">Hashtags</button>
+        </div>
+        
+        <div id="searchResults">
+            <div class="placeholder">
+                <p>Enter your search query to find users, videos, images, and hashtags</p>
+            </div>
+        </div>
     </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('searchInput');
+            const searchButton = document.getElementById('searchButton');
+            const tabs = document.querySelectorAll('.tab');
+            const searchResults = document.getElementById('searchResults');
+            let activeTab = 'all';
+            
+            // Tab switching
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    tabs.forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    activeTab = this.dataset.type;
+                    if (searchInput.value.trim()) {
+                        performSearch();
+                    }
+                });
+            });
+            
+            // Search button click handler
+            searchButton.addEventListener('click', performSearch);
+            
+            // Enter key in search input
+            searchInput.addEventListener('keyup', function(e) {
+                if (e.key === 'Enter') {
+                    performSearch();
+                }
+            });
+            
+            function performSearch() {
+                const query = searchInput.value.trim();
+                if (query.length === 0) {
+                    showPlaceholder('Enter your search query to find users, videos, images, and hashtags');
+                    return;
+                }
+                
+                showLoader();
+                
+                // Call the comprehensive search API
+                fetch(`/api/comprehensive_search/?q=${encodeURIComponent(query)}&type=${activeTab}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        displayResults(data, activeTab);
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        showError('An error occurred during the search. Please try again.');
+                    });
+            }
+            
+            function showLoader() {
+                searchResults.innerHTML = `
+                    <div class="loader">
+                        <div class="spinner"></div>
+                        <p>Searching...</p>
+                    </div>
+                `;
+            }
+            
+            function showPlaceholder(message) {
+                searchResults.innerHTML = `
+                    <div class="placeholder">
+                        <p>${message}</p>
+                    </div>
+                `;
+            }
+            
+            function showError(message) {
+                searchResults.innerHTML = `
+                    <div class="error-message">
+                        <p>${message}</p>
+                    </div>
+                `;
+            }
+            
+            function displayResults(results, activeTab) {
+                // Combine results into a single array for the current activeTab
+                let items = [];
+                if (activeTab === 'all') {
+                    // For 'all', we combine all types
+                    items = [
+                        ...(results.users || []).map(user => ({ ...user, type: 'user' })),
+                        ...(results.videos || []).map(video => ({ ...video, type: 'video' })),
+                        ...(results.images || []).map(image => ({ ...image, type: 'image' })),
+                        ...(results.hashtags || []).map(hashtag => ({ ...hashtag, type: 'hashtag' }))
+                    ];
+                } else {
+                    items = (results[activeTab] || []).map(item => ({ ...item, type: activeTab }));
+                }
+                
+                if (items.length === 0) {
+                    showNoResults();
+                    return;
+                }
+                
+                let resultsHTML = '<div class="results-grid">';
+                
+                items.forEach(item => {
+                    if (item.type === 'user') {
+                        const avatar = item.profile_picture || 
+                            `<div class="user-avatar">${item.username.charAt(0).toUpperCase()}</div>`;
+                        
+                        resultsHTML += `
+                            <a href="/profile/${item.username}/" class="result-card user-card">
+                                ${typeof avatar === 'string' ? 
+                                    `<img src="${avatar}" alt="${item.full_name || item.username}" class="user-avatar">` : 
+                                    avatar}
+                                <div class="user-info">
+                                    <h3>${item.full_name || item.username}</h3>
+                                    <p>${item.username}</p>
+                                </div>
+                            </a>
+                        `;
+                    } 
+                    else if (item.type === 'video') {
+                        resultsHTML += `
+                            <a href="/post/${item.id}/" class="result-card">
+                                <video controls width="100%" poster="${item.media_url}">
+                                    <source src="${item.media_url}" type="video/mp4">
+                                    Your browser does not support the video tag.
+                                </video>
+                                <div class="info">
+                                    <h3>${item.caption || 'Video'}</h3>
+                                    <p>By ${item.user}</p>
+                                </div>
+                            </a>
+                        `;
+                    }
+                    else if (item.type === 'image') {
+                        resultsHTML += `
+                            <a href="/post/${item.id}/" class="result-card">
+                                <img src="${item.media_url}" alt="${item.caption || 'Image'}">
+                                <div class="info">
+                                    <h3>${item.caption || 'Image'}</h3>
+                                    <p>By ${item.user}</p>
+                                </div>
+                            </a>
+                        `;
+                    }
+                    else if (item.type === 'hashtag') {
+                        resultsHTML += `
+                            <a href="/hashtag/${item.name}/" class="result-card hashtag-card">
+                                <h3>#${item.name}</h3>
+                                <p>${item.count} posts</p>
+                            </a>
+                        `;
+                    }
+                });
+                
+                resultsHTML += '</div>';
+                searchResults.innerHTML = resultsHTML;
+            }
+            
+            function showNoResults() {
+                searchResults.innerHTML = `
+                    <div class="no-results">
+                        <p>No results found for your search</p>
+                    </div>
+                `;
+            }
+        });
+    </script>
 </body>
 </html>

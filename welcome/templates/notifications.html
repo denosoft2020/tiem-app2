@@ -1,236 +1,398 @@
-{% include '_navbar.html' %}
 {% load static %}
-
+{% include '_navbar.html' %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Notifications</title>
+    <title>Notifications & Messages | SocialFeed</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
             --primary: #4a90e2;
-            --secondary: #f45d22;
-            --accent: #7b61ff;
+            --primary-dark: #3a7bc8;
+            --primary-light: rgba(74, 144, 226, 0.1);
             --text: #333333;
             --text-light: #999999;
             --border: #e6e6e6;
             --bg: #f9f9f9;
-            --gradient: linear-gradient(135deg, #4a90e2, #f45d22);
+            --card-bg: #ffffff;
+            --unread-bg: rgba(74, 144, 226, 0.05);
+            --success: #4caf50;
+            --success-light: rgba(76, 175, 80, 0.1);
+            --danger: #f44336;
+            --danger-light: rgba(244, 67, 54, 0.1);
+            --gradient: linear-gradient(135deg, var(--primary), #7b61ff);
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            --shadow-hover: 0 6px 16px rgba(0, 0, 0, 0.1);
+            --radius: 12px;
+            --radius-sm: 8px;
         }
         
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
         }
         
         body {
-            font-family: 'Poppins', sans-serif;
             background-color: var(--bg);
             color: var(--text);
-            line-height: 1.6;
+            line-height: 1.5;
+            padding-bottom: 20px;
         }
         
         /* Top Navigation */
         .top-nav {
             position: sticky;
             top: 0;
-            background: white;
+            background: var(--card-bg);
             padding: 16px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 2px solid var(--border);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border-bottom: 1px solid var(--border);
+            box-shadow: var(--shadow);
             z-index: 100;
         }
         
         .logo {
-            font-size: 18px;
-            font-weight: bold;
+            font-size: 22px;
+            font-weight: 700;
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-        }
-        
-        .logo img {
-            height: 30px;
-            vertical-align: middle;
+            gap: 10px;
+            color: var(--text);
         }
         
         .nav-icons {
             display: flex;
-            gap: 24px;
+            gap: 20px;
         }
         
         .nav-icon {
-            font-size: 24px;
+            font-size: 22px;
             cursor: pointer;
             position: relative;
-            transition: transform 0.2s ease;
+            color: var(--text);
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.2s;
         }
         
         .nav-icon:hover {
-            transform: scale(1.1);
+            background: var(--primary-light);
+            color: var(--primary);
         }
         
         .badge {
             position: absolute;
-            top: -6px;
-            right: -10px;
-            background: var(--secondary);
+            top: -2px;
+            right: -2px;
+            background: var(--primary);
             color: white;
             border-radius: 50%;
-            width: 18px;
-            height: 18px;
+            min-width: 20px;
+            height: 20px;
             font-size: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-        }
-        
-        /* Page Structure */
-        .page {
-            display: block;
-        }
-        
-        .page.hidden {
-            display: none;
-        }
-        
-        .header {
-            padding: 20px;
-            font-size: 22px;
-            font-weight: bold;
-            border-bottom: 2px solid var(--border);
-            position: sticky;
-            top: 60px;
-            background: white;
-            z-index: 90;
+            padding: 0 5px;
+            font-weight: 600;
         }
         
         /* Notification Page */
-        .notification {
-            padding: 16px 20px;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            transition: background 0.3s ease, transform 0.2s ease;
+        .notification-page {
+            display: block;
+            max-width: 600px;
+            margin: 0 auto;
         }
         
-        .notification:hover {
-            background: rgba(0, 0, 0, 0.05);
+        .notification-header {
+            position: sticky;
+            top: 72px;
+            background: var(--card-bg);
+            z-index: 90;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .notification-header h1 {
+            font-size: 24px;
+            font-weight: 700;
+        }
+        
+        .mark-read-btn {
+            color: var(--primary);
+            font-weight: 600;
+            cursor: pointer;
+            background: none;
+            border: none;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            border-radius: 20px;
+            transition: all 0.2s;
+        }
+        
+        .mark-read-btn:hover {
+            background: var(--primary-light);
+        }
+        
+        .notification-tabs {
+            display: flex;
+            background: var(--card-bg);
+            position: sticky;
+            top: 130px;
+            z-index: 80;
+            overflow-x: auto;
+            scrollbar-width: none;
+            border-bottom: 1px solid var(--border);
+            padding: 0 10px;
+        }
+        
+        .notification-tabs::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .notification-tab {
+            padding: 16px 20px;
+            font-weight: 500;
+            cursor: pointer;
+            position: relative;
+            white-space: nowrap;
+            font-size: 15px;
+            color: var(--text-light);
+            transition: all 0.2s;
+        }
+        
+        .notification-tab.active {
+            color: var(--text);
+            font-weight: 600;
+        }
+        
+        .notification-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 20px;
+            right: 20px;
+            height: 3px;
+            background: var(--primary);
+            border-radius: 3px;
+        }
+        
+        .notification-tab:hover:not(.active) {
+            color: var(--text);
+        }
+        
+        .notification-list, .conversation-list {
+            padding: 10px 0 20px;
+        }
+        
+        .notification-item {
+            padding: 18px 20px;
+            display: flex;
+            align-items: flex-start;
+            background: var(--card-bg);
+            margin: 10px 0;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .notification-item.unread {
+            background: var(--unread-bg);
+        }
+        
+        .notification-item:hover {
             transform: translateY(-2px);
+            box-shadow: var(--shadow-hover);
         }
         
         .notification-avatar {
-            width: 50px;
-            height: 50px;
+            width: 48px;
+            height: 48px;
             border-radius: 50%;
             margin-right: 16px;
+            background: var(--gradient);
+            color: white;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 22px;
+            font-weight: 700;
+            font-size: 18px;
             flex-shrink: 0;
-            background: var(--gradient);
-            color: white;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+        
+        .notification-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
         }
         
         .notification-content {
             flex: 1;
+            min-width: 0;
         }
         
         .username {
-            font-weight: bold;
-            margin-bottom: 4px;
-            cursor: pointer;
-            color: var(--primary);
-            transition: color 0.2s ease;
-        }
-        
-        .username:hover {
-            color: var(--secondary);
-        }
-        
-        .action {
+            font-weight: 700;
             color: var(--text);
-            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .notification-type {
+            font-size: 12px;
+            background: var(--primary-light);
+            color: var(--primary);
+            padding: 2px 8px;
+            border-radius: 20px;
+        }
+        
+        .message {
+            color: var(--text);
+            margin: 4px 0;
         }
         
         .time {
             color: var(--text-light);
+            font-size: 13px;
+            margin-top: 6px;
+        }
+        
+        .notification-preview {
+            display: block;
+            background: var(--bg);
+            border-radius: var(--radius-sm);
+            padding: 12px;
+            margin-top: 12px;
             font-size: 14px;
+            color: var(--text);
+            border-left: 3px solid var(--primary);
+            text-decoration: none;
+            transition: background-color 0.2s;
         }
         
-        .actions {
-            display: flex;
-            margin-top: 10px;
-            gap: 20px;
+        .notification-preview:hover {
+            background-color: rgba(0, 0, 0, 0.03);
         }
         
-        .action-btn {
+        .empty-state {
+            text-align: center;
+            padding: 50px 20px;
+            color: var(--text-light);
+            background: var(--card-bg);
+            margin: 20px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+        }
+        
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.2;
             color: var(--primary);
-            font-weight: bold;
-            font-size: 16px;
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 0;
-            transition: opacity 0.2s ease;
         }
         
-        .action-btn:hover {
-            opacity: 0.7;
+        .empty-state h3 {
+            font-size: 20px;
+            margin-bottom: 10px;
+            color: var(--text);
+            font-weight: 600;
         }
         
-        /* Messages Page */
-        .search-bar {
-            padding: 10px 20px;
-            background: white;
+        .empty-state p {
+            max-width: 300px;
+            margin: 0 auto;
+            line-height: 1.6;
         }
         
-        .search-input {
-            width: 100%;
-            padding: 10px 15px;
-            border-radius: 8px;
-            border: 1px solid var(--border);
-            font-size: 14px;
+        /* Toast notifications */
+        .toast {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            padding: 14px 28px;
+            border-radius: 30px;
+            font-size: 15px;
+            z-index: 1000;
+            animation: fadeInOut 3s forwards;
+            font-weight: 500;
+            backdrop-filter: blur(10px);
         }
         
-        .conversation {
-            padding: 16px 20px;
-            border-bottom: 1px solid var(--border);
+        @keyframes fadeInOut {
+            0% { opacity: 0; bottom: 80px; }
+            10% { opacity: 1; bottom: 100px; }
+            90% { opacity: 1; bottom: 100px; }
+            100% { opacity: 0; bottom: 80px; }
+        }
+        
+        /* Messaging Styles */
+        .conversation-item {
+            padding: 18px 20px;
             display: flex;
             align-items: center;
+            background: var(--card-bg);
+            margin: 10px 0;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
             cursor: pointer;
-            transition: background 0.3s ease;
+            transition: all 0.2s;
+            position: relative;
         }
         
-        .conversation:hover {
-            background: rgba(0, 0, 0, 0.05);
+        .conversation-item:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover);
+        }
+        
+        .conversation-item.unread {
+            background: var(--unread-bg);
         }
         
         .conversation-avatar {
-            width: 50px;
-            height: 50px;
+            width: 48px;
+            height: 48px;
             border-radius: 50%;
             margin-right: 16px;
-            flex-shrink: 0;
+            background: var(--gradient);
+            color: white;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 22px;
-            color: white;
+            font-weight: 700;
+            font-size: 18px;
+            flex-shrink: 0;
+            overflow: hidden;
         }
         
-        .avatar-1 { background: linear-gradient(45deg, #ff9a9e, #fad0c4); }
-        .avatar-2 { background: linear-gradient(45deg, #a18cd1, #fbc2eb); }
-        .avatar-3 { background: linear-gradient(45deg, #ffc3a0, #ffafbd); }
-        .avatar-4 { background: linear-gradient(45deg, #a1c4fd, #c2e9fb); }
+        .conversation-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+        }
         
         .conversation-details {
             flex: 1;
@@ -238,170 +400,311 @@
         }
         
         .conversation-name {
-            font-weight: bold;
+            font-weight: 700;
+            color: var(--text);
             margin-bottom: 4px;
             display: flex;
             justify-content: space-between;
         }
         
-        .conversation-time {
-            color: var(--text-light);
-            font-size: 12px;
-            font-weight: normal;
-        }
-        
-        .conversation-preview {
+        .conversation-message {
             color: var(--text-light);
             font-size: 14px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            max-width: 300px;
         }
         
-        .unread {
-            font-weight: bold;
-            color: var(--text);
+        .conversation-time {
+            position: absolute;
+            top: 18px;
+            right: 20px;
+            color: var(--text-light);
+            font-size: 12px;
         }
         
-        /* Chat Page */
-        .chat-header {
-            padding: 16px 20px;
-            border-bottom: 2px solid var(--border);
+        .unread-badge {
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 12px;
             display: flex;
             align-items: center;
+            justify-content: center;
+            position: absolute;
+            bottom: 18px;
+            right: 20px;
+        }
+        
+        .conversation-header {
+            padding: 15px 20px;
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border);
             position: sticky;
-            top: 60px;
-            background: white;
-            z-index: 90;
-        }
-        
-        .back-icon {
-            font-size: 20px;
-            margin-right: 16px;
-            cursor: pointer;
-        }
-        
-        .chat-user {
-            font-weight: bold;
-            flex: 1;
-        }
-        
-        .chat-actions {
+            top: 130px;
+            z-index: 80;
             display: flex;
-            gap: 20px;
+            justify-content: space-between;
+            align-items: center;
         }
         
-        .chat-action {
+        .conversation-title {
+            font-size: 18px;
+            font-weight: 700;
+        }
+        
+        .conversation-actions {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .conversation-action {
             font-size: 20px;
             cursor: pointer;
+            color: var(--text-light);
+            transition: color 0.2s;
         }
         
-        .chat-messages {
+        .conversation-action:hover {
+            color: var(--primary);
+        }
+        
+        .message-container {
+            height: 400px;
+            overflow-y: auto;
             padding: 20px;
             display: flex;
             flex-direction: column;
-            gap: 12px;
-            height: calc(100vh - 180px);
-            overflow-y: auto;
+            gap: 15px;
         }
         
-        .message {
-            max-width: 70%;
+        .message-item {
+            max-width: 80%;
             padding: 12px 16px;
             border-radius: 18px;
-            font-size: 14px;
-            line-height: 1.4;
+            position: relative;
+            animation: fadeIn 0.3s;
         }
         
-        .received {
-            align-self: flex-start;
-            background: #efefef;
-            border-bottom-left-radius: 4px;
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         
-        .sent {
+        .message-item.sent {
             align-self: flex-end;
             background: var(--primary);
             color: white;
             border-bottom-right-radius: 4px;
         }
         
+        .message-item.received {
+            align-self: flex-start;
+            background: var(--bg);
+            color: var(--text);
+            border-bottom-left-radius: 4px;
+        }
+        
+        .message-text {
+            font-size: 15px;
+            line-height: 1.4;
+        }
+        
         .message-time {
-            font-size: 10px;
-            color: var(--text-light);
-            margin-top: 4px;
+            font-size: 11px;
             text-align: right;
+            margin-top: 5px;
+            opacity: 0.8;
+        }
+        
+        .message-input-container {
+            padding: 15px 20px;
+            background: var(--card-bg);
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 10px;
         }
         
         .message-input {
-            position: sticky;
-            bottom: 0;
-            background: white;
-            padding: 16px 20px;
-            border-top: 2px solid var(--border);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        
-        .input-box {
             flex: 1;
-            padding: 12px 16px;
-            border-radius: 24px;
+            padding: 12px 18px;
             border: 1px solid var(--border);
-            font-size: 14px;
-            resize: none;
-            max-height: 100px;
+            border-radius: 24px;
+            font-size: 15px;
+            outline: none;
+            transition: border-color 0.2s;
         }
         
-        .input-box:focus {
-            outline: none;
+        .message-input:focus {
             border-color: var(--primary);
         }
         
-        .send-btn {
-            width: 44px;
-            height: 44px;
+        .send-button {
+            width: 48px;
+            height: 48px;
             border-radius: 50%;
             background: var(--primary);
             color: white;
             border: none;
+            cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            cursor: pointer;
             font-size: 18px;
+            transition: background 0.2s;
         }
         
-        .send-btn:disabled {
-            background: var(--border);
-            cursor: not-allowed;
+        .send-button:hover {
+            background: var(--primary-dark);
         }
         
-        /* Floating Action Button */
-        .fab {
-            position: fixed;
-            bottom: 24px;
-            right: 28px;
-            width: 60px;
-            height: 60px;
+        .request-item {
+            padding: 18px 20px;
+            display: flex;
+            align-items: center;
+            background: var(--card-bg);
+            margin: 10px 0;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            transition: all 0.2s;
+        }
+        
+        .request-avatar {
+            width: 48px;
+            height: 48px;
             border-radius: 50%;
+            margin-right: 16px;
             background: var(--gradient);
             color: white;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-            cursor: pointer;
-            z-index: 80;
-            border: none;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            font-weight: 700;
+            font-size: 18px;
+            flex-shrink: 0;
+            overflow: hidden;
         }
         
-        .fab:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+        .request-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+        
+        .request-details {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .request-username {
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 4px;
+        }
+        
+        .request-text {
+            color: var(--text-light);
+            font-size: 14px;
+        }
+        
+        .request-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .accept-btn, .reject-btn {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+        
+        .accept-btn {
+            background: var(--success-light);
+            color: var(--success);
+        }
+        
+        .accept-btn:hover {
+            background: var(--success);
+            color: white;
+        }
+        
+        .reject-btn {
+            background: var(--danger-light);
+            color: var(--danger);
+        }
+        
+        .reject-btn:hover {
+            background: var(--danger);
+            color: white;
+        }
+        
+        .section-title {
+            padding: 15px 20px 5px;
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text);
+        }
+        
+        .back-button {
+            cursor: pointer;
+            margin-right: 15px;
+            font-size: 18px;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            transition: background 0.2s;
+        }
+        
+        .back-button:hover {
+            background: var(--primary-light);
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0,0,0,.1);
+            border-radius: 50%;
+            border-top-color: var(--primary);
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 8px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Responsive design */
+        @media (max-width: 600px) {
+            .notification-header {
+                padding: 16px;
+            }
+            
+            .notification-tab {
+                padding: 14px 16px;
+                font-size: 14px;
+            }
+            
+            .notification-item, .conversation-item, .request-item {
+                padding: 16px;
+                margin: 8px 16px;
+            }
+            
+            .message-container {
+                height: 300px;
+            }
         }
     </style>
 </head>
@@ -409,140 +712,731 @@
     <!-- Top Navigation -->
     <div class="top-nav">
         <div class="logo">
-            <img src="{% static 'img/logo_t.png' %}" alt="App Logo">
-            <span>Notifications</span>
+            <i class="fas fa-comments"></i>
+            <span>Notifications & Messages</span>
         </div>
         <div class="nav-icons">
-            <div class="nav-icon" id="notificationsBtn">🔔</div>
-            <div class="nav-icon" id="messagesBtn">
-                ✉️
-                <div class="badge">3</div>
+            <div class="nav-icon" onclick="window.location.href='{% url 'profile' request.user.username %}'">
+                <i class="fas fa-user"></i>
+            </div>
+            <div class="nav-icon">
+                <i class="fas fa-cog"></i>
+            </div>
+            <div class="nav-icon" id="unreadBadge">
+                <i class="fas fa-bell"></i>
+                <span class="badge" id="notificationBadge">0</span>
             </div>
         </div>
     </div>
     
     <!-- Notification Page -->
-    <div class="page" id="notificationPage">
-        <div class="header">Activity</div>
+    <div class="notification-page">
+        <div class="notification-header">
+            <h1>Activity</h1>
+            <button class="mark-read-btn" id="markAllAsRead">
+                <i class="fas fa-check-circle"></i> <span id="markReadText">Mark all as read</span>
+            </button>
+        </div>
         
-        {% for notification in notifications %}
-        <div class="notification">
-            <div class="notification-avatar">{{ notification.avatar }}</div>
-            <div class="notification-content">
-                <div class="username">{{ notification.username }}</div>
-                <div class="action">{{ notification.action }}</div>
-                <div class="time">{{ notification.time }}</div>
-                {% if notification.has_actions %}
-                <div class="actions">
-                    <button class="action-btn reply-btn">Reply</button>
-                    <button class="action-btn">Like</button>
-                </div>
-                {% endif %}
+        <div class="notification-tabs">
+            <div class="notification-tab active" data-tab="all">All</div>
+            <div class="notification-tab" data-tab="messages">Messages</div>
+        </div>
+        
+        <!-- All Notifications Tab -->
+        <div class="notification-list" id="notificationList">
+            <div class="empty-state" id="notificationsLoading">
+                <div class="loading-spinner"></div>
+                <p>Loading notifications...</p>
             </div>
         </div>
-        {% endfor %}
-    </div>
-    
-    <!-- Messages Page -->
-    <div class="page hidden" id="messagesPage">
-        <div class="header">Messages</div>
-        <div class="search-bar">
-            <input type="text" class="search-input" placeholder="Search messages">
-        </div>
         
-        {% for conversation in conversations %}
-        <div class="conversation" data-user="{{ conversation.user }}">
-            <div class="conversation-avatar avatar-{{ forloop.counter }}">{{ conversation.avatar }}</div>
-            <div class="conversation-details">
-                <div class="conversation-name">
-                    {{ conversation.name }}
-                    <span class="conversation-time">{{ conversation.time }}</span>
+        <!-- Messages Tab -->
+        <div class="conversation-list" id="conversationList" style="display: none;">
+            <div class="section-title">Conversation Requests</div>
+            <div id="requestList">
+                <div class="empty-state" id="requestsLoading">
+                    <div class="loading-spinner"></div>
+                    <p>Loading requests...</p>
                 </div>
-                <div class="conversation-preview {% if conversation.unread %}unread{% endif %}">
-                    {{ conversation.preview }}
+            </div>
+            
+            <div class="section-title">Your Conversations</div>
+            <div id="conversationItems">
+                <div class="empty-state" id="conversationsLoading">
+                    <div class="loading-spinner"></div>
+                    <p>Loading conversations...</p>
                 </div>
             </div>
         </div>
-        {% endfor %}
-    </div>
-    
-    <!-- Chat Page -->
-    <div class="page hidden" id="chatPage">
-        <div class="chat-header">
-            <div class="back-icon" id="backFromChat">←</div>
-            <div class="chat-user" id="chatUserName">Chat</div>
-            <div class="chat-actions">
-                <div class="chat-action">📞</div>
-                <div class="chat-action">ⓘ</div>
+        
+        <!-- Active Conversation View -->
+        <div id="activeConversation" style="display: none;">
+            <div class="conversation-header">
+                <div class="back-button" id="backButton">
+                    <i class="fas fa-arrow-left"></i>
+                </div>
+                <div class="conversation-title" id="conversationTitle"></div>
+                <div class="conversation-actions">
+                    <div class="conversation-action">
+                        <i class="fas fa-phone-alt"></i>
+                    </div>
+                    <div class="conversation-action">
+                        <i class="fas fa-video"></i>
+                    </div>
+                    <div class="conversation-action">
+                        <i class="fas fa-ellipsis-v"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="message-container" id="messageContainer">
+                <div class="empty-state" id="messagesLoading">
+                    <div class="loading-spinner"></div>
+                    <p>Loading messages...</p>
+                </div>
+            </div>
+            
+            <div class="message-input-container">
+                <input type="text" class="message-input" id="messageInput" placeholder="Type a message...">
+                <button class="send-button" id="sendButton">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
             </div>
         </div>
-        
-        <div class="chat-messages" id="messageContainer">
-            {% for message in messages %}
-            <div class="message {% if message.sent %}sent{% else %}received{% endif %}">
-                {{ message.content }}
-                <div class="message-time">{{ message.time }}</div>
-            </div>
-            {% endfor %}
-        </div>
-        
-        <div class="message-input">
-            <textarea class="input-box" placeholder="Type a message..." id="messageInput"></textarea>
-            <button class="send-btn" id="sendBtn" disabled>↑</button>
-        </div>
     </div>
-    
-    <!-- Floating Action Button -->
-    <button class="fab" id="newMessageBtn">✏️</button>
     
     <script>
-        // Fetch notifications
-async function fetchNotifications() {
-    try {
-        const response = await fetch('/api/messaging/notifications/', {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+        // Global variables
+        const CURRENT_USER_ID = {{ request.user.id }};
+        const CURRENT_USERNAME = "{{ request.user.username }}";
+        const BASE_URL = "{{ settings.BASE_URL }}";
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get DOM elements
+            const notificationList = document.getElementById('notificationList');
+            const conversationList = document.getElementById('conversationList');
+            const requestList = document.getElementById('requestList');
+            const conversationItems = document.getElementById('conversationItems');
+            const activeConversation = document.getElementById('activeConversation');
+            const messageContainer = document.getElementById('messageContainer');
+            const messageInput = document.getElementById('messageInput');
+            const sendButton = document.getElementById('sendButton');
+            const conversationTitle = document.getElementById('conversationTitle');
+            const backButton = document.getElementById('backButton');
+            const tabs = document.querySelectorAll('.notification-tab');
+            const markAllAsReadBtn = document.getElementById('markAllAsRead');
+            const notificationBadge = document.getElementById('notificationBadge');
+            
+            // State variables
+            let currentConversation = null;
+            let currentRecipient = null;
+            let unreadCount = 0;
+            
+            // Get CSRF token for Django
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
             }
-        });
-        const data = await response.json();
-        // Update your UI with the notifications
-    } catch (error) {
-        console.error('Error fetching notifications:', error);
-    }
-}
-
-// Fetch conversations
-async function fetchConversations() {
-    try {
-        const response = await fetch('/api/messaging/conversations/', {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            
+            const csrftoken = getCookie('csrftoken');
+            
+            // Tab switching functionality
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    // Remove active class from all tabs
+                    tabs.forEach(t => t.classList.remove('active'));
+                    
+                    // Add active class to clicked tab
+                    this.classList.add('active');
+                    
+                    const tabType = this.dataset.tab;
+                    
+                    if (tabType === 'all') {
+                        notificationList.style.display = 'block';
+                        conversationList.style.display = 'none';
+                        activeConversation.style.display = 'none';
+                        fetchNotifications();
+                    } else if (tabType === 'messages') {
+                        notificationList.style.display = 'none';
+                        conversationList.style.display = 'block';
+                        activeConversation.style.display = 'none';
+                        fetchConversationRequests();
+                        fetchConversations();
+                    }
+                });
+            });
+            
+            // Back button from conversation to messages list
+            backButton.addEventListener('click', function() {
+                activeConversation.style.display = 'none';
+                conversationList.style.display = 'block';
+            });
+            
+            // Mark all notifications as read
+            markAllAsReadBtn.addEventListener('click', function() {
+                // Show loading state
+                const originalText = markAllAsReadBtn.querySelector('span').textContent;
+                markAllAsReadBtn.querySelector('span').textContent = 'Marking...';
+                markAllAsReadBtn.disabled = true;
+                
+                fetch('/api/notifications/mark_all_as_read/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrftoken,
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        // Update UI
+                        document.querySelectorAll('.notification-item.unread').forEach(item => {
+                            item.classList.remove('unread');
+                        });
+                        
+                        // Reset badge count
+                        unreadCount = 0;
+                        notificationBadge.textContent = '0';
+                        
+                        showToast('All notifications marked as read');
+                    } else {
+                        showToast('Failed to mark notifications as read');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('An error occurred');
+                })
+                .finally(() => {
+                    markAllAsReadBtn.querySelector('span').textContent = originalText;
+                    markAllAsReadBtn.disabled = false;
+                });
+            });
+            
+            // Send message functionality
+            sendButton.addEventListener('click', sendMessage);
+            messageInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                }
+            });
+            
+            function sendMessage() {
+                const message = messageInput.value.trim();
+                if (message && currentRecipient) {
+                    // Show sending state
+                    const originalHTML = sendButton.innerHTML;
+                    sendButton.innerHTML = '<div class="loading-spinner"></div>';
+                    sendButton.disabled = true;
+                    
+                    fetch('/api/messages/send/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrftoken
+                        },
+                        body: JSON.stringify({
+                            recipient: currentRecipient.id,
+                            content: message
+                        })
+                    })
+                    .then(response => {
+                        if (!response.ok) throw new Error('Failed to send message');
+                        return response.json();
+                    })
+                    .then(data => {
+                        addMessageToChat({
+                            content: message,
+                            created_at: new Date().toISOString(),
+                            sender: { id: CURRENT_USER_ID }
+                        }, true);
+                        messageInput.value = '';
+                    })
+                    .catch(error => {
+                        console.error('Error sending message:', error);
+                        showToast('Failed to send message');
+                    })
+                    .finally(() => {
+                        sendButton.innerHTML = originalHTML;
+                        sendButton.disabled = false;
+                    });
+                }
             }
-        });
-        const data = await response.json();
-        // Update your UI with the conversations
-    } catch (error) {
-        console.error('Error fetching conversations:', error);
-    }
-}
+            
+            function addMessageToChat(message, isSent) {
+                const messageElement = document.createElement('div');
+                messageElement.classList.add('message-item');
+                messageElement.classList.add(isSent ? 'sent' : 'received');
+                
+                const date = new Date(message.created_at);
+                const timeString = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                
+                messageElement.innerHTML = `
+                    <div class="message-text">${message.content}</div>
+                    <div class="message-time">${timeString}</div>
+                `;
+                
+                messageContainer.appendChild(messageElement);
+                messageContainer.scrollTop = messageContainer.scrollHeight;
+            }
+            
+            // Fetch notifications from backend
+            function fetchNotifications() {
+                // Show loading state
+                notificationList.innerHTML = `
+                    <div class="empty-state" id="notificationsLoading">
+                        <div class="loading-spinner"></div>
+                        <p>Loading notifications...</p>
+                    </div>
+                `;
+                
+                // Fetch real notifications
+                fetch('/notifications/stream/?format=json', {
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.length === 0) {
+                        notificationList.innerHTML = `
+                            <div class="empty-state">
+                                <i class="fas fa-bell-slash empty-state-icon"></i>
+                                <h3>No notifications</h3>
+                                <p>You don't have any notifications yet.</p>
+                            </div>
+                        `;
+                        return;
+                    }
+                    
+                    notificationList.innerHTML = '';
+                    
+                    // Calculate unread count
+                    unreadCount = data.filter(notification => !notification.is_read).length;
+                    notificationBadge.textContent = unreadCount;
+                    
+                    // Render notifications
+                    data.forEach(notification => {
+                        const notificationElement = document.createElement('div');
+                        notificationElement.classList.add('notification-item');
+                        if (!notification.is_read) {
+                            notificationElement.classList.add('unread');
+                        }
+                        
+                        const createdAt = new Date(notification.created_at);
+                        const timeAgo = formatTimeAgo(createdAt);
+                        
+                        // Profile picture logic
+                        let avatarContent = '';
+                        if (notification.sender.avatar_url) {
+                            avatarContent = `<img src="${notification.sender.avatar_url}" alt="${notification.sender.username}">`;
+                        } else {
+                            avatarContent = notification.sender.username.charAt(0).toUpperCase();
+                        }
+                        
+                        // Post preview with link
+                        const previewContent = notification.content_preview ? 
+                            `<a href="#" class="notification-preview">${notification.content_preview}</a>` : 
+                            '';
+                        
+                        notificationElement.innerHTML = `
+                            <div class="notification-avatar">
+                                ${avatarContent}
+                            </div>
+                            <div class="notification-content">
+                                <div class="username">
+                                    ${notification.sender.username}
+                                    <div class="notification-type">${notification.notification_type}</div>
+                                </div>
+                                <div class="message">${notification.message}</div>
+                                ${previewContent}
+                                <div class="time">${timeAgo}</div>
+                            </div>
+                        `;
+                        
+                        notificationList.appendChild(notificationElement);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching notifications:', error);
+                    notificationList.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-exclamation-triangle empty-state-icon"></i>
+                            <h3>Failed to load</h3>
+                            <p>Could not load notifications. Please try again later.</p>
+                        </div>
+                    `;
+                });
+            }
+            
+            // Fetch conversation requests
+            function fetchConversationRequests() {
+                // Show loading state
+                requestList.innerHTML = `
+                    <div class="empty-state" id="requestsLoading">
+                        <div class="loading-spinner"></div>
+                        <p>Loading requests...</p>
+                    </div>
+                `;
+                
+                // Fetch real conversation requests
+                fetch('/api/messages/requests/', {
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.length === 0) {
+                        requestList.innerHTML = `
+                            <div class="empty-state">
+                                <i class="fas fa-user-plus empty-state-icon"></i>
+                                <h3>No requests</h3>
+                                <p>You don't have any conversation requests.</p>
+                            </div>
+                        `;
+                        return;
+                    }
+                    
+                    requestList.innerHTML = '';
+                    
+                    // Render conversation requests
+                    data.forEach(request => {
+                        const requestElement = document.createElement('div');
+                        requestElement.classList.add('request-item');
+                        
+                        // Profile picture logic
+                        let requestAvatarContent = '';
+                        if (request.sender.profile_picture) {
+                            requestAvatarContent = `<img src="${request.sender.profile_picture}" alt="${request.sender.username}">`;
+                        } else {
+                            requestAvatarContent = request.sender.username.charAt(0).toUpperCase();
+                        }
+                        
+                        requestElement.innerHTML = `
+                            <div class="request-avatar">
+                                ${requestAvatarContent}
+                            </div>
+                            <div class="request-details">
+                                <div class="request-username">${request.sender.username}</div>
+                                <div class="request-text">Wants to start a conversation</div>
+                            </div>
+                            <div class="request-actions">
+                                <button class="accept-btn" data-request-id="${request.id}">Accept</button>
+                                <button class="reject-btn" data-request-id="${request.id}">Reject</button>
+                            </div>
+                        `;
+                        
+                        requestList.appendChild(requestElement);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching conversation requests:', error);
+                    requestList.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-exclamation-triangle empty-state-icon"></i>
+                            <h3>Failed to load</h3>
+                            <p>Could not load conversation requests. Please try again later.</p>
+                        </div>
+                    `;
+                });
+            }
+            
+            // Accept conversation request
+            function acceptRequest(requestId) {
+                fetch(`/api/messages/requests/${requestId}/accept/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrftoken,
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'accepted') {
+                        showToast('Request accepted');
+                        fetchConversationRequests();
+                        fetchConversations();
+                    } else {
+                        showToast('Failed to accept request');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error accepting request:', error);
+                    showToast('An error occurred');
+                });
+            }
+            
+            // Reject conversation request
+            function rejectRequest(requestId) {
+                fetch(`/api/messages/requests/${requestId}/reject/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrftoken,
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'rejected') {
+                        showToast('Request rejected');
+                        fetchConversationRequests();
+                    } else {
+                        showToast('Failed to reject request');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error rejecting request:', error);
+                    showToast('An error occurred');
+                });
+            }
+            
+            // Fetch conversations
+            function fetchConversations() {
+                conversationItems.innerHTML = `
+                    <div class="empty-state" id="conversationsLoading">
+                        <div class="loading-spinner"></div>
+                        <p>Loading conversations...</p>
+                    </div>
+                `;
+                
+                // Use correct endpoint
+                fetch('/api/conversations/', {
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.length === 0) {
+                        conversationItems.innerHTML = `
+                            <div class="empty-state">
+                                <i class="fas fa-comments empty-state-icon"></i>
+                                <h3>No conversations</h3>
+                                <p>You don't have any active conversations.</p>
+                            </div>
+                        `;
+                        return;
+                    }
+                    
+                    conversationItems.innerHTML = '';
+                    
+                    data.forEach(conversation => {
+                        const otherUser = conversation.participants.find(
+                            p => p.id !== CURRENT_USER_ID
+                        );
+                        
+                        if (!otherUser) return;
+                        
+                        const conversationElement = document.createElement('div');
+                        conversationElement.classList.add('conversation-item');
+                        conversationElement.dataset.conversationId = conversation.id;
+                        conversationElement.dataset.userId = otherUser.id;
+                        conversationElement.dataset.username = otherUser.username;
+                        
+                        if (conversation.unread_count > 0) {
+                            conversationElement.classList.add('unread');
+                        }
+                        
+                        let avatarContent = '';
+                        if (otherUser.profile_picture) {
+                            avatarContent = `<img src="${otherUser.profile_picture}" alt="${otherUser.username}">`;
+                            conversationElement.dataset.profilePicture = otherUser.profile_picture;
+                        } else {
+                            avatarContent = otherUser.username.charAt(0).toUpperCase();
+                        }
+                        
+                        conversationElement.innerHTML = `
+                            <div class="conversation-avatar">
+                                ${avatarContent}
+                            </div>
+                            <div class="conversation-details">
+                                <div class="conversation-name">
+                                    ${otherUser.username}
+                                    <div class="conversation-time">${formatTimeAgo(new Date(conversation.last_message_at))}</div>
+                                </div>
+                                <div class="conversation-message">${conversation.last_message || 'Click to start chatting'}</div>
+                            </div>
+                            ${conversation.unread_count > 0 ? `<div class="unread-badge">${conversation.unread_count}</div>` : ''}
+                        `;
+                        
+                        conversationElement.addEventListener('click', () => {
+                            openConversation(
+                                conversation.id, 
+                                {
+                                    id: otherUser.id,
+                                    username: otherUser.username,
+                                    profile_picture: otherUser.profile_picture
+                                }
+                            );
+                        });
+                        
+                        conversationItems.appendChild(conversationElement);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching conversations:', error);
+                    conversationItems.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-exclamation-triangle empty-state-icon"></i>
+                            <h3>Failed to load</h3>
+                            <p>Could not load conversations. Please try again later.</p>
+                        </div>
+                    `;
+                });
+            }
+            
+            // Open conversation function
+            function openConversation(conversationId, otherUser) {
+                currentConversation = conversationId;
+                currentRecipient = otherUser;
+                conversationList.style.display = 'none';
+                activeConversation.style.display = 'block';
+                
+                // Set conversation title
+                conversationTitle.textContent = otherUser.username;
+                
+                // Show loading state
+                messageContainer.innerHTML = `
+                    <div class="empty-state" id="messagesLoading">
+                        <div class="loading-spinner"></div>
+                        <p>Loading messages...</p>
+                    </div>
+                `;
+                
+                // Clear message input
+                messageInput.value = '';
+                
+                // Fetch messages for this conversation
+                fetch(`/api/messages/${conversationId}/`, {
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error('Failed to load messages');
+                    return response.json();
+                })
+                .then(messages => {
+                    messageContainer.innerHTML = '';
+                    
+                    if (messages.length === 0) {
+                        const welcomeMessage = document.createElement('div');
+                        welcomeMessage.classList.add('message-item', 'received');
+                        welcomeMessage.innerHTML = `
+                            <div class="message-text">This is the start of your conversation with ${otherUser.username}. Send a message to begin chatting!</div>
+                            <div class="message-time">Just now</div>
+                        `;
+                        messageContainer.appendChild(welcomeMessage);
+                    } else {
+                        messages.forEach(message => {
+                            const isSent = message.sender.id === CURRENT_USER_ID;
+                            addMessageToChat(message, isSent);
+                        });
+                        messageContainer.scrollTop = messageContainer.scrollHeight;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading messages:', error);
+                    messageContainer.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <h3>Failed to load messages</h3>
+                            <p>Please try again later.</p>
+                        </div>
+                    `;
+                });
+            }
+            
+            function showToast(message) {
+                // Remove existing toast if any
+                const existingToast = document.querySelector('.toast');
+                if (existingToast) existingToast.remove();
+                
+                // Create toast element
+                const toast = document.createElement('div');
+                toast.className = 'toast';
+                toast.textContent = message;
+                document.body.appendChild(toast);
+                
+                // Remove toast after animation
+                setTimeout(() => {
+                    toast.remove();
+                }, 3000);
+            }
+            
+            function formatTimeAgo(date) {
+                const now = new Date();
+                const diffMs = now - date;
+                const diffSecs = Math.floor(diffMs / 1000);
+                const diffMins = Math.floor(diffSecs / 60);
+                const diffHours = Math.floor(diffMins / 60);
+                const diffDays = Math.floor(diffHours / 24);
+                
+                if (diffSecs < 60) {
+                    return 'Just now';
+                } else if (diffMins < 60) {
+                    return `${diffMins} min${diffMins !== 1 ? 's' : ''} ago`;
+                } else if (diffHours < 24) {
+                    return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+                } else if (diffDays === 1) {
+                    return 'Yesterday';
+                } else {
+                    return `${diffDays} days ago`;
+                }
+            }
+            
+            // Initialize the page
+            fetchNotifications();
+            
+            // Check URL for conversation parameter
+            const urlParams = new URLSearchParams(window.location.search);
+            const openConversationParam = urlParams.get('open_conversation');
+            
+            if (openConversationParam) {
+                // Switch to messages tab
+                document.querySelector('.notification-tab[data-tab="messages"]').click();
+                
+                // Try to open conversation after loading
+                setTimeout(() => {
+                    fetchConversations().then(() => {
+                        const conversationElement = document.querySelector(
+                            `[data-username="${openConversationParam}"]`
+                        );
+                        
+                        if (conversationElement) {
+                            conversationElement.click();
+                        }
+                    });
+                }, 500);
+            }
 
-// Send a message
-async function sendMessage(conversationId, content) {
-    try {
-        const response = await fetch(`/api/messaging/conversations/${conversationId}/messages/`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-            },
-            body: JSON.stringify({ content })
+            // Add event delegation for request buttons
+            requestList.addEventListener('click', function(e) {
+                if (e.target.classList.contains('accept-btn')) {
+                    const requestId = e.target.dataset.requestId;
+                    acceptRequest(requestId);
+                }
+                else if (e.target.classList.contains('reject-btn')) {
+                    const requestId = e.target.dataset.requestId;
+                    rejectRequest(requestId);
+                }
+            });
         });
-        const data = await response.json();
-        return data;
-    } catch (error) {
-        console.error('Error sending message:', error);
-    }
-}
     </script>
 </body>
 </html>

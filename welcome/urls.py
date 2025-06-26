@@ -4,7 +4,7 @@ from django.contrib.auth.views import LoginView, LogoutView
 from django.conf import settings
 from django.conf.urls.static import static
 from rest_framework.routers import DefaultRouter
-from .views import NotificationListView, MarkNotificationAsRead, ConversationListView, ConversationCreateView, MessageListView, UnreadCountView, PostViewSet, FeedViewSet, ProfileViewSet, CommentViewSet, api_follow_user
+from .views import NotificationListView, NotificationDetailView, MarkNotificationAsRead, MarkAllNotificationsRead, ConversationListView, PostViewSet, FeedViewSet, ProfileViewSet, CommentViewSet, api_follow_user, ConversationRequestView, ConversationRequestActionView, accept_message_request, reject_message_request, MarkAllNotificationsRead, ConversationRequestListView, AcceptedConversationListView, ConversationMessagesView, send_message, get_conversation_requests
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 
@@ -14,7 +14,6 @@ router.register(r'posts', PostViewSet, basename='post')
 router.register(r'feed', FeedViewSet, basename='feed')
 router.register(r'profiles', ProfileViewSet, basename='profile')
 router.register(r'comments', CommentViewSet, basename='comment')
-
 
 
 urlpatterns = [
@@ -46,7 +45,6 @@ urlpatterns = [
     path('edit-profile/', views.edit_profile, name='edit-profile'),
     path('post/<int:post_id>/save/', views.save_post, name='save-post'),
     path('upload/', views.upload_page, name="upload_page"),
-    #path('api/posts/create/', PostViewSet.as_view({'post': 'create'}), name='post-create')
     path('api/upload/', views.upload_media, name='upload_media'),
     path('api/posts/<int:post_id>/like', views.like_post, name='like_post'),
     path('api/posts/<int:post_id>/comments/', views.post_comments, name='post-comments'),
@@ -56,15 +54,34 @@ urlpatterns = [
     path('friends/', views.friends, name='friends'),
     path('api/comprehensive_search/', views.comprehensive_search, name='comprehensive_search'),
     path('notifications/', NotificationListView.as_view(), name='notification-list'),
-    path('notifications/<int:pk>/read/', MarkNotificationAsRead.as_view(), name='mark-notification-read'),
+    path('notifications/mark_all_read/', MarkAllNotificationsRead.as_view(), name='mark-all-notifications-read'),
+    path('notifications/<int:pk>/', NotificationDetailView.as_view(), name='notification-detail'),
+    path('api/notifications/mark_all_as_read/', MarkAllNotificationsRead.as_view(), name='mark-all-notifications-read'),
+    path('api/users/<int:pk>/follow/', views.follow_user),
+    #path('api/messages/requests/', ConversationRequestView.as_view(), name='api-messages-requests'),
+    path('notifications/stream/', NotificationListView.as_view(), name='notification-stream'),
+    path('conversations/request/', ConversationRequestView.as_view(), name='conversation-request'),
+    path('conversations/request/<int:pk>/action/', ConversationRequestActionView.as_view(), name='conversation-request-action'),
     path('conversations/', ConversationListView.as_view(), name='conversation-list'),
-    path('conversations/create/', ConversationCreateView.as_view(), name='conversation-create'),
-    path('conversations/<int:conversation_id>/messages/', MessageListView.as_view(), name='message-list'),
-    path('unread-count/', UnreadCountView.as_view(), name='unread-count'),
+    path('api/conversations/', views.get_user_conversations, name='api-conversations'),
+    path('initiate-conversation/<int:user_id>/', views.initiate_conversation, name='initiate-conversation'),
+    path('api/accepted-conversations/', AcceptedConversationListView.as_view(), name='accepted-conversations'),
+    path('api/follow/<int:user_id>/', views.api_follow_user, name='api-follow-user'),
+    path('api/conversations/<int:pk>/', views.get_conversation, name='get-conversation'),
+    #path('api/messages/', views.conversation_messages, name='conversation-messages'),
+    #path('api/send-message/', views.create_message, name='create-message'),
     path('api/auth/', include('rest_framework.urls')),
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('send-message/', views.send_message, name='send_message'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    #path('api/messaging/', include('messaging.urls')),
+    # path('api/messaging/', include('messaging.urls')),  # Removed because 'messaging' module does not exist
+    path('api/messages/<int:conversation_id>/', ConversationMessagesView.as_view(), name='conversation-messages'),
+    path('api/send-message/', send_message, name='send-message'),
+    path('api/messages/requests/', views.get_conversation_requests, name='conversation-request-list'),
+    path('api/messages/requests/<int:request_id>/accept/', accept_message_request, name='accept-message-request'),
+    path('api/messages/<int:conversation_id>/', views.get_conversation_messages),
+    path('api/messages/requests/<int:request_id>/reject/', reject_message_request, name='reject-message-request'),
+    path('api/messages/send/', views.send_message),
 ]
 
 if settings.DEBUG:

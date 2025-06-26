@@ -9,7 +9,7 @@ from django.http import JsonResponse, HttpResponse
 import json
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
-from .models import Profile, Post, Notification, Conversation, Message, LiveStream, UserInteraction, Hashtag, Like, Comment, User 
+from .models import Profile, Post, Notification, Message, LiveStream, UserInteraction, Hashtag, Like, Comment, User, ConversationRequest, Conversation
 from .forms import ProfileUpdateForm, ProfilePictureForm
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -28,9 +28,10 @@ from rest_framework.renderers import JSONRenderer, TemplateHTMLRenderer
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view, action, permission_classes
 from rest_framework.permissions import IsAuthenticated
-from .serializers import NotificationSerializer, ConversationSerializer, MessageSerializer
+from rest_framework import serializers
+from .serializers import NotificationSerializer, MessageSerializer, ConversationRequestSerializer, ConversationSerializer
 from django.contrib.auth import get_user_model
-from django.db.models import Q
+from django.db.models import Q, Count, Subquery, OuterRef, Max
 from agora_token_builder import RtcTokenBuilder
 from .serializers import (
     PostSerializer, 
@@ -348,7 +349,6 @@ class CommentViewSet(viewsets.ModelViewSet):
             interaction_type='comment'
         )
 
-
 def upload_page(request):
     """Renders the camera UI page"""
     return render(request, 'upload.html')
@@ -576,29 +576,69 @@ def comprehensive_search(request):
         logger.exception("Error in comprehensive_search")
         return JsonResponse({'error': str(e)}, status=500)
 
-
-
-#User = get_user_model()
-
 class NotificationListView(generics.ListAPIView):
     serializer_class = NotificationSerializer
     permission_classes = [permissions.IsAuthenticated]
-    renderer_classes = [JSONRenderer, TemplateHTMLRenderer]  # Add TemplateHTMLRenderer
+    renderer_classes = [JSONRenderer, TemplateHTMLRenderer]
+    pagination_class = None  # Disable pagination for notifications
     
     def get_queryset(self):
-        return Notification.objects.filter(recipient=self.request.user).select_related('sender')
+        # Filter by notification type if provided
+        n_type = self.request.query_params.get('type', 'all')
+        queryset = Notification.objects.filter(recipient=self.request.user).select_related('sender', 'sender__profile').order_by('-created_at')
+        
+        if n_type != 'all':
+            # Map frontend tabs to notification types
+            type_mapping = {
+                'likes': ['like'],
+                'comments': ['comment', 'reply'],
+                'mentions': ['mention'],
+                'others': ['download', 'view', 'share']
+            }
+            if n_type in type_mapping:
+                queryset = queryset.filter(notification_type__in=type_mapping[n_type])
+        
+        return queryset.order_by('-created_at')
     
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
         serializer = self.get_serializer(queryset, many=True)
         
         if request.accepted_renderer.format == 'html':
-            # Return your custom template for browser requests
-            return Response({'notifications': serializer.data}, template_name='notifications.html')
+            return Response({
+                'notifications': queryset,
+                'unread_count': queryset.filter(is_read=False).count()
+            }, template_name='notifications.html')
         
-        # Return JSON for API requests
         return Response(serializer.data)
 
+class MarkAllNotificationsRead(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def post(self, request):
+        updated = Notification.objects.filter(
+            recipient=request.user, 
+            is_read=False
+        ).update(is_read=True)
+        
+        return Response({
+            'status': 'success',
+            'marked_read': updated
+        })
+
+class NotificationDetailView(generics.RetrieveUpdateAPIView):
+    queryset = Notification.objects.all()
+    serializer_class = NotificationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        # Mark as read when retrieved
+        if not instance.is_read:
+            instance.is_read = True
+            instance.save()
+        return super().retrieve(request, *args, **kwargs)
+    
 class MarkNotificationAsRead(generics.UpdateAPIView):
     queryset = Notification.objects.all()
     permission_classes = [permissions.IsAuthenticated]
@@ -612,78 +652,500 @@ class MarkNotificationAsRead(generics.UpdateAPIView):
         notification.save()
         return Response({"status": "marked as read"})
 
-class ConversationListView(generics.ListAPIView):
-    serializer_class = ConversationSerializer
+class ConversationRequestView(generics.CreateAPIView):
+    serializer_class = ConversationRequestSerializer
     permission_classes = [permissions.IsAuthenticated]
     
-    def get_queryset(self):
-        return Conversation.objects.filter(participants=self.request.user).prefetch_related('participants', 'messages')
-
-class ConversationCreateView(generics.CreateAPIView):
-    queryset = Conversation.objects.all()
-    serializer_class = ConversationSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    
-    def perform_create(self, serializer):
-        participants = [self.request.user]
-        other_user_id = self.request.data.get('user_id')
-        if other_user_id:
-            try:
-                other_user = User.objects.get(id=other_user_id)
-                participants.append(other_user)
-            except User.DoesNotExist:
-                pass
-        conversation = serializer.save()
-        conversation.participants.set(participants)
-
-class MessageListView(generics.ListCreateAPIView):
-    serializer_class = MessageSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    
-    def get_queryset(self):
-        conversation_id = self.kwargs['conversation_id']
-        return Message.objects.filter(conversation_id=conversation_id).select_related('sender')
-    
-    def perform_create(self, serializer):
-        conversation_id = self.kwargs['conversation_id']
-        conversation = Conversation.objects.filter(
-            id=conversation_id,
-            participants=self.request.user
-        ).first()
+    def create(self, request, *args, **kwargs):
+        recipient_id = request.data.get('recipient_id')
+        recipient = get_object_or_404(User, id=recipient_id)
         
-        if not conversation:
-            return Response({"detail": "Not found"}, status=status.HTTP_404_NOT_FOUND)
+        # Check if mutual follow exists
+        if request.user.profile.follows.filter(user=recipient).exists() and \
+           recipient.profile.follows.filter(user=request.user).exists():
+            return Response({
+                "detail": "You can message this user directly"
+            }, status=status.HTTP_400_BAD_REQUEST)
         
-        message = serializer.save(
-            conversation=conversation,
-            sender=self.request.user
+        # Create or update request
+        request_obj, created = ConversationRequest.objects.get_or_create(
+            sender=request.user,
+            recipient=recipient,
+            defaults={'status': 'pending'}
         )
         
-        # Mark other user's unread messages as read when sending a new message
+        if not created:
+            return Response({
+                "detail": "Request already exists"
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Send notification to recipient
+        Notification.objects.create(
+            recipient=recipient,
+            sender=request.user,
+            notification_type='message_request',
+            message=f"{request.user.username} wants to message you"
+        )
+        
+        return Response({"status": "request_sent"}, status=status.HTTP_201_CREATED)
+
+class ConversationRequestActionView(generics.UpdateAPIView):
+    queryset = ConversationRequest.objects.all()
+    serializer_class = ConversationRequestSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        action = request.data.get('action')
+        
+        if instance.recipient != request.user:
+            return Response({"detail": "Permission denied"}, status=status.HTTP_403_FORBIDDEN)
+        
+        if action == 'accept':
+            instance.status = 'accepted'
+            instance.save()
+            
+            # Create conversation if it doesn't exist
+            conversation, created = Conversation.objects.get_or_create()
+            conversation.participants.add(instance.sender, instance.recipient)
+            
+            return Response({"status": "accepted"})
+        
+        elif action == 'reject':
+            instance.status = 'rejected'
+            instance.save()
+            return Response({"status": "rejected"})
+        
+        return Response({"detail": "Invalid action"}, status=status.HTTP_400_BAD_REQUEST)
+
+class ConversationListView(generics.ListAPIView):
+    serializer_class = ConversationRequestSerializer  # Use the correct serializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return ConversationRequest.objects.filter(
+            Q(sender=self.request.user) | Q(recipient=self.request.user)
+        ).order_by('-created_at').prefetch_related('messages')
+
+class ConversationRequestListView(generics.ListAPIView):
+    serializer_class = ConversationRequestSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return ConversationRequest.objects.filter(
+            recipient=self.request.user,
+            status='pending'
+        ).select_related('sender', 'sender__profile').order_by('-created_at')
+
+
+class AcceptedConversationListView(generics.ListAPIView):
+    serializer_class = ConversationSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        # Get conversations with messages
+        return Conversation.objects.filter(
+            participants=self.request.user
+        ).annotate(
+            last_message=Subquery(
+                Message.objects.filter(
+                    conversation=OuterRef('pk')
+                ).order_by('-created_at').values('content')[:1]
+            ),
+            last_message_at=Max('messages__created_at'),
+            unread_count=Count(
+                'messages',
+                filter=Q(messages__is_read=False) & 
+                ~Q(messages__sender=self.request.user)
+            )
+        ).order_by('-last_message_at')
+
+class ConversationRequestListView(generics.ListAPIView):
+    serializer_class = ConversationRequestSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return ConversationRequest.objects.filter(
+            recipient=self.request.user,
+            status='pending'
+        ).select_related('sender').order_by('-created_at')
+
+class mark_all_as_read(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    def post(self, request):
+        # Mark all notifications as read
+        updated_count = Notification.objects.filter(
+            recipient=request.user, 
+            is_read=False
+        ).update(is_read=True)
+        return Response({
+            'status': 'success',
+            'updated_count': updated_count
+        })
+
+@login_required
+@csrf_exempt  # Use only if CSRF is handled client-side; otherwise, ensure CSRF token is sent
+def send_message(request):
+    conversation_id = request.data.get('conversation')
+    recipient_id = request.data.get('recipient')
+    content = request.data.get('content')
+    
+    if conversation_id:
+        conversation = get_object_or_404(
+            Conversation, 
+            id=conversation_id,
+            participants=request.user
+        )
+    elif recipient_id:
+        recipient = get_object_or_404(User, id=recipient_id)
+        conversation, _ = Conversation.objects.get_or_create()
+        conversation.participants.add(request.user, recipient)
+    else:
+        return Response(
+            {'error': 'Either conversation or recipient must be provided'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    message = Message.objects.create(
+        conversation=conversation,
+        sender=request.user,
+        content=content
+    )
+    
+    # Update conversation timestamp
+    conversation.save()
+    
+    # Create notification for recipient
+    recipient = conversation.participants.exclude(id=request.user.id).first()
+    if recipient:
+        Notification.objects.create(
+            recipient=recipient,
+            sender=request.user,
+            notification_type='message',
+            message=f"New message from {request.user.username}",
+            content_object=message
+        )
+    
+    return Response(MessageSerializer(message).data, status=status.HTTP_201_CREATED)
+
+class accept_message_request(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    def post(self, request, request_id):
+        try:
+            request_obj = get_object_or_404(ConversationRequest, id=request_id, recipient=request.user)
+            request_obj.status = 'accepted'
+            request_obj.save()
+            # Create conversation if it doesn't exist
+            conversation, created = ConversationRequest.objects.get_or_create(
+                participants__in=[request.user, request_obj.sender]
+            )
+            conversation.participants.add(request.user, request_obj.sender)
+            return Response({'status': 'success', 'message': 'Request accepted'})
+        except ConversationRequest.DoesNotExist:
+            return Response({'status': 'error', 'message': 'Request not found'}, status=404)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def accept_message_request(request, request_id):
+    try:
+        request_obj = get_object_or_404(
+            ConversationRequest, 
+            id=request_id, 
+            recipient=request.user
+        )
+        request_obj.status = 'accepted'
+        request_obj.save()
+        
+        # Create conversation
+        conversation = Conversation.objects.create()
+        conversation.participants.add(request.user, request_obj.sender)
+        
+        return Response({
+            'status': 'success', 
+            'message': 'Request accepted',
+            'conversation_id': conversation.id
+        })
+    except ConversationRequest.DoesNotExist:
+        return Response({
+            'status': 'error', 
+            'message': 'Request not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+
+
+class reject_message_request(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    def post(self, request, request_id):
+        try:
+            request_obj = get_object_or_404(ConversationRequest, id=request_id, recipient=request.user)
+            request_obj.status = 'rejected'
+            request_obj.save()
+            return Response({'status': 'success', 'message': 'Request rejected'})
+        except ConversationRequest.DoesNotExist:
+            return Response({'status': 'error', 'message': 'Request not found'}, status=404)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def reject_message_request(request, request_id):
+    try:
+        request_obj = get_object_or_404(
+            ConversationRequest, 
+            id=request_id, 
+            recipient=request.user
+        )
+        request_obj.status = 'rejected'
+        request_obj.save()
+        return Response({
+            'status': 'success', 
+            'message': 'Request rejected'
+        })
+    except ConversationRequest.DoesNotExist:
+        return Response({
+            'status': 'error', 
+            'message': 'Request not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+
+@login_required
+def initiate_conversation(request, user_id):
+    recipient = get_object_or_404(User, id=user_id)
+    
+    # Check if user is trying to message themselves
+    if request.user == recipient:
+        return redirect('profile', username=recipient.username)
+
+    # Check for existing conversation request
+    existing_request = ConversationRequest.objects.filter(
+        (Q(sender=request.user, recipient=recipient) | 
+         Q(sender=recipient, recipient=request.user))
+    ).first()
+
+    if existing_request:
+        if existing_request.status == 'accepted':
+            return redirect(f'/notifications/?tab=messages&open_conversation={existing_request.id}')
+        return redirect('/notifications/?tab=messages')
+
+    # Create new conversation request
+    conversation_request = ConversationRequest.objects.create(
+        sender=request.user,
+        recipient=recipient,
+        status='pending'
+    )
+
+    # Create notification
+    Notification.objects.create(
+        recipient=recipient,
+        sender=request.user,
+        notification_type='message_request',
+        message=f"{request.user.username} wants to message you"
+    )
+
+    return redirect('/notifications/?tab=messages')
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_conversation(request, pk):
+    conversation = get_object_or_404(ConversationRequest, id=pk)
+    # Verify user is part of conversation
+    if request.user not in [conversation.sender, conversation.recipient]:
+        return Response(status=status.HTTP_403_FORBIDDEN)
+    
+    serializer = ConversationRequestSerializer(conversation)
+    return Response(serializer.data)
+
+#temporary endpoint to fetch messages in a conversation
+class ConversationRequestSerializer(serializers.ModelSerializer):
+    sender = serializers.SerializerMethodField()
+
+    def get_sender(self, obj):
+        return {
+            'id': obj.sender.id,
+            'username': obj.sender.username,
+            'profile_picture': obj.sender.profile.profile_picture.url if obj.sender.profile.profile_picture else ''
+        }
+
+    class Meta:
+        model = ConversationRequest
+        fields = ['id', 'sender', 'status', 'created_at']
+
+@api_view(['GET'])
+def get_conversation_requests(request):
+    if not request.user.is_authenticated:
+        return Response({'error': 'Not authenticated'}, status=403)
+    requests = ConversationRequest.objects.filter(recipient=request.user, status='pending')
+    serializer = ConversationRequestSerializer(requests, many=True)
+    return Response(serializer.data)
+
+#the end of test code
+@api_view(['GET'])
+@login_required
+def get_user_conversations(request):
+    user = request.user
+    conversations = ConversationRequest.objects.filter(
+        Q(sender=user) | Q(recipient=user),
+        status='accepted'
+    ).order_by('-created_at')
+
+    data = []
+    for convo in conversations:
+        other = convo.recipient if convo.sender == user else convo.sender
+
+        messages_qs = getattr(convo, 'messages', None)
+        last_msg = messages_qs.last() if messages_qs else None
+
+        data.append({
+            'id': convo.id,
+            'participants': [
+                {
+                    'id': other.id,
+                    'username': other.username,
+                    'profile_picture': other.profile.profile_picture.url if hasattr(other, 'profile') else ''
+                }
+            ],
+            'last_message': last_msg.content if last_msg else '',
+            'last_message_at': last_msg.created_at if last_msg else convo.created_at,
+            'unread_count': messages_qs.filter(is_read=False).exclude(sender=user).count() if messages_qs else 0
+        })
+
+    return Response(data)
+
+@api_view(['GET'])
+def get_conversation_messages(request, conversation_id):
+    user = request.user
+    conversation = get_object_or_404(ConversationRequest, id=conversation_id, status='accepted')
+
+    # Only allow sender or recipient to view
+    if user != conversation.sender and user != conversation.recipient:
+        return Response({'error': 'Unauthorized'}, status=403)
+
+    messages = Message.objects.filter(conversation=conversation).order_by('created_at')
+
+    data = [
+        {
+            'id': msg.id,
+            'sender': {
+                'id': msg.sender.id,
+                'username': msg.sender.username
+            },
+            'content': msg.content,
+            'created_at': msg.created_at.isoformat(),
+            'is_read': msg.is_read
+        } for msg in messages
+    ]
+
+    return Response(data)
+
+@api_view(['POST'])
+def send_message(request):
+    user = request.user
+    recipient_id = request.data.get('recipient')
+    content = request.data.get('content')
+
+    if not recipient_id or not content:
+        return Response({'error': 'Recipient and content are required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        recipient = User.objects.get(id=recipient_id)
+    except User.DoesNotExist:
+        return Response({'error': 'Recipient not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    # Get or create accepted conversation
+    convo = ConversationRequest.objects.filter(
+        ((Q(sender=user) & Q(recipient=recipient)) |
+         (Q(sender=recipient) & Q(recipient=user))),
+        status='accepted'
+    ).first()
+
+    if not convo:
+        return Response({'error': 'No accepted conversation found'}, status=status.HTTP_403_FORBIDDEN)
+
+    message = Message.objects.create(
+        conversation=convo,
+        sender=user,
+        content=content
+    )
+
+    return Response({
+        'id': message.id,
+        'sender': {
+            'id': user.id,
+            'username': user.username
+        },
+        'content': message.content,
+        'created_at': message.created_at.isoformat(),
+        'is_read': message.is_read
+    }, status=status.HTTP_201_CREATED)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def conversation_messages(request):
+    conversation_id = request.GET.get('conversation')
+    if not conversation_id:
+        return Response({'error': 'conversation parameter required'}, status=400)
+    
+    conversation = get_object_or_404(ConversationRequest, id=conversation_id)
+    # Verify user is part of conversation
+    if request.user not in [conversation.sender, conversation.recipient]:
+        return Response(status=status.HTTP_403_FORBIDDEN)
+    
+    messages = Message.objects.filter(conversation=conversation).order_by('created_at')
+    serializer = MessageSerializer(messages, many=True)
+    return Response(serializer.data)
+
+class ConversationMessagesView(generics.ListAPIView):
+    serializer_class = MessageSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        conversation_id = self.kwargs['conversation_id']
+        conversation = get_object_or_404(
+            Conversation, 
+            id=conversation_id,
+            participants=self.request.user
+        )
+        
+        # Mark messages as read when fetched
         Message.objects.filter(
             conversation=conversation,
             is_read=False
         ).exclude(sender=self.request.user).update(is_read=True)
+        
+        return Message.objects.filter(
+            conversation=conversation
+        ).order_by('created_at')
 
-class UnreadCountView(generics.GenericAPIView):
-    permission_classes = [permissions.IsAuthenticated]
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_message(request):
+    conversation_id = request.data.get('conversation')
+    content = request.data.get('content')
     
-    def get(self, request):
-        unread_notifications = Notification.objects.filter(
-            recipient=request.user,
-            is_read=False
-        ).count()
-        
-        unread_messages = Message.objects.filter(
-            conversation__participants=request.user,
-            is_read=False
-        ).exclude(sender=request.user).count()
-        
-        return Response({
-            'notifications': unread_notifications,
-            'messages': unread_messages
-        })
+    if not conversation_id or not content:
+        return Response({'error': 'conversation and content are required'}, status=400)
     
+    conversation = get_object_or_404(ConversationRequest, id=conversation_id)
+    
+    # Verify user is part of conversation
+    if request.user not in [conversation.sender, conversation.recipient]:
+        return Response(status=status.HTTP_403_FORBIDDEN)
+    
+    message = Message.objects.create(
+        conversation=conversation,
+        sender=request.user,
+        content=content
+    )
+    
+    # Create notification for recipient
+    recipient = conversation.sender if conversation.recipient == request.user else conversation.recipient
+    Notification.objects.create(
+        recipient=recipient,
+        sender=request.user,
+        notification_type='message',
+        message=f"New message from {request.user.username}",
+        content_object=message
+    )
+    
+    return Response(MessageSerializer(message).data, status=status.HTTP_201_CREATED)
+
 def feed(request):
     active_tab = request.GET.get('tab', 'reel')
     
@@ -747,7 +1209,6 @@ def download_media(request, post_id):
     except Post.DoesNotExist:
         return HttpResponse('Post not found', status=404)
 
-
 def live(request):
     # Get users who are currently live
     live_users = Profile.objects.filter(is_live=True)
@@ -782,7 +1243,6 @@ def like_post(request, post_id):
         'liked': liked,
         'likes_count': post.likes.count()
     })
-
 
 @api_view(['GET', 'POST'])
 @login_required
@@ -838,8 +1298,6 @@ def follow_user(request, user_id):
         'success': True,
         'following': following
     })
-
-
 
 def create_stream(request):
     if request.method == 'POST':

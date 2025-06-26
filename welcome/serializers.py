@@ -1,7 +1,8 @@
 from rest_framework import serializers
-from .models import Notification, Conversation, Message, Post, Like, Comment, Profile, User
+from .models import Notification, ConversationRequest, Conversation, Message, Post, Like, Comment, Profile, User
 from django.contrib.auth import get_user_model
 from django.conf import settings
+from django.urls import reverse
 
 
 User = get_user_model()
@@ -13,56 +14,86 @@ class UserSerializer(serializers.ModelSerializer):
 
 class NotificationSerializer(serializers.ModelSerializer):
     sender = UserSerializer(read_only=True)
-    avatar = serializers.SerializerMethodField()
+    avatar_url = serializers.SerializerMethodField()
+    content_preview = serializers.SerializerMethodField()
+    content_type = serializers.CharField(source='content_type.model', read_only=True)
+    post_media_url = serializers.SerializerMethodField()
     
     class Meta:
         model = Notification
-        fields = ['id', 'sender', 'notification_type', 'message', 'is_read', 'created_at', 'content_id', 'avatar']
+        fields = ['id', 'sender', 'notification_type', 'message', 'is_read', 
+                  'created_at', 'avatar_url', 'content_preview', 'content_type',
+                  'object_id', 'post_media_url']
     
-    def get_avatar(self, obj):
-        # This would be replaced with your actual avatar logic
-        return obj.sender.username[0].upper()
+    def get_avatar_url(self, obj):
+        request = self.context.get('request')
+        if obj.sender.profile.profile_picture:
+            return request.build_absolute_uri(obj.sender.profile.profile_picture.url)
+        return None
+    
+    def get_content_preview(self, obj):
+        if obj.content_object and hasattr(obj.content_object, 'caption'):
+            return obj.content_object.caption[:100] + '...' if len(obj.content_object.caption) > 100 else obj.content_object.caption
+        return None
 
-class ConversationSerializer(serializers.ModelSerializer):
-    participants = UserSerializer(many=True, read_only=True)
-    last_message = serializers.SerializerMethodField()
-    unread_count = serializers.SerializerMethodField()
-    avatar = serializers.SerializerMethodField()
+    def get_sender(self, obj):
+        profile = getattr(obj.sender, 'profile', None)
+        return {
+            "username": obj.sender.username,
+            "profile_picture": self.context['request'].build_absolute_uri(profile.profile_picture.url) if profile and profile.profile_picture else None
+        }
+
+    def get_post_media_url(self, obj):
+        if hasattr(obj.content_object, 'media_file'):
+            return self.context['request'].build_absolute_uri(obj.content_object.media_file.url)
+        return None
+    
+class ConversationRequestSerializer(serializers.ModelSerializer):
+    sender = UserSerializer(read_only=True)
+    recipient = UserSerializer(read_only=True)
     
     class Meta:
+        model = ConversationRequest
+        fields = ['id', 'sender', 'recipient', 'status', 'created_at']
+
+class ConversationSerializer(serializers.ModelSerializer):
+    other_user = serializers.SerializerMethodField()
+    last_message = serializers.SerializerMethodField()
+    last_message_at = serializers.DateTimeField()
+    unread_count = serializers.IntegerField()
+
+    class Meta:
         model = Conversation
-        fields = ['id', 'participants', 'created_at', 'updated_at', 'last_message', 'unread_count', 'avatar']
+        fields = ['id', 'other_user', 'last_message', 'last_message_at', 'unread_count']
     
-    def get_last_message(self, obj):
-        last_message = obj.messages.last()
-        if last_message:
+    def get_other_user(self, obj):
+        request = self.context.get('request')
+        other_user = obj.participants.exclude(id=request.user.id).first()
+        if other_user:
             return {
-                'content': last_message.content,
-                'time': last_message.created_at,
-                'sent': last_message.sender == self.context['request'].user
+                'id': other_user.id,
+                'username': other_user.username,
+                'profile_picture': other_user.profile.profile_picture.url if other_user.profile.profile_picture else None
             }
         return None
     
-    def get_unread_count(self, obj):
-        return obj.messages.filter(is_read=False).exclude(sender=self.context['request'].user).count()
-    
-    def get_avatar(self, obj):
-        # Get the other participant (assuming 1:1 chat)
-        other_user = obj.participants.exclude(id=self.context['request'].user.id).first()
-        return other_user.username[0].upper() if other_user else '?'
+    def get_last_message(self, obj):
+        return obj.last_message
 
 class MessageSerializer(serializers.ModelSerializer):
-    sender = UserSerializer(read_only=True)
-    sent = serializers.SerializerMethodField()
+    sender = serializers.SerializerMethodField()
+    created_at = serializers.DateTimeField(format='%Y-%m-%d %H:%M')
     
     class Meta:
         model = Message
-        fields = ['id', 'sender', 'content', 'is_read', 'created_at', 'sent']
+        fields = ['id', 'content', 'sender', 'created_at']
     
-    def get_sent(self, obj):
-        return obj.sender == self.context['request'].user
-    
-
+    def get_sender(self, obj):
+        return {
+            'id': obj.sender.id,
+            'username': obj.sender.username
+        }
+   
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User

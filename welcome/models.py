@@ -21,6 +21,9 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django_resized import ResizedImageField
 from django.urls import reverse
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
+
 
 #from .serializers import VideoSerializer
 
@@ -126,6 +129,9 @@ class Post(models.Model):
     def get_absolute_url(self):
         return reverse('post-detail', kwargs={'pk': self.pk})
 
+    class Meta:
+        ordering = ['-created_at']
+
 class Like(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='likes')
@@ -208,40 +214,88 @@ class Notification(models.Model):
         ('comment', 'Comment'),
         ('reply', 'Reply'),
         ('follow', 'Follow'),
+        ('mention', 'Mention'),
+        ('download', 'Download'),
+        ('view', 'View'),
+        ('share', 'Share'),
     )
     
     recipient = models.ForeignKey(User, related_name='notifications', on_delete=models.CASCADE)
     sender = models.ForeignKey(User, related_name='sent_notifications', on_delete=models.CASCADE)
     notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES)
-    message = models.TextField()
+    message = models.TextField(blank=True)
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(default=timezone.now)
-    content_id = models.PositiveIntegerField(null=True, blank=True)  # ID of related content
+    
+    # Generic foreign key for related content
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, null=True, blank=True)
+    object_id = models.PositiveIntegerField(null=True, blank=True)
+    content_object = GenericForeignKey('content_type', 'object_id')
     
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['recipient', 'is_read', 'created_at']),
+        ]
     
     def __str__(self):
         return f"{self.sender} -> {self.recipient}: {self.notification_type}"
+    
+    def save(self, *args, **kwargs):
+        # Auto-generate message based on notification type
+        if not self.message:
+            if self.notification_type == 'like':
+                self.message = f"{self.sender.username} liked your post"
+            elif self.notification_type == 'comment':
+                self.message = f"{self.sender.username} commented on your post"
+            elif self.notification_type == 'follow':
+                self.message = f"{self.sender.username} started following you"
+            elif self.notification_type == 'mention':
+                self.message = f"{self.sender.username} mentioned you"
+            elif self.notification_type == 'download':
+                self.message = f"{self.sender.username} downloaded your content"
+            elif self.notification_type == 'view':
+                self.message = f"{self.sender.username} viewed your story"
+            elif self.notification_type == 'share':
+                self.message = f"{self.sender.username} shared your post"
+        super().save(*args, **kwargs)
 
 class Conversation(models.Model):
     participants = models.ManyToManyField(User, related_name='conversations')
-    created_at = models.DateTimeField(default=timezone.now)
-    updated_at = models.DateTimeField(auto_now=True)
-    
+    created_at = models.DateTimeField(auto_now_add=True)
+
     class Meta:
-        ordering = ['-updated_at']
+        ordering = ['created_at']
+
+class ConversationRequest(models.Model):
+    STATUS_CHOICES = (
+        ('pending', 'Pending'),
+        ('accepted', 'Accepted'),
+        ('rejected', 'Rejected'),
+    )
+    
+    sender = models.ForeignKey(User, related_name='sent_requests', on_delete=models.CASCADE)
+    recipient = models.ForeignKey(User, related_name='received_requests', on_delete=models.CASCADE)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+   
+
+    class Meta:
+        ordering = ['-created_at']
+        unique_together = ('sender', 'recipient')
     
     def __str__(self):
-        return f"Conversation {self.id}"
+        return f"{self.sender} -> {self.recipient}: {self.status}"
 
 class Message(models.Model):
     conversation = models.ForeignKey(Conversation, related_name='messages', on_delete=models.CASCADE)
     sender = models.ForeignKey(User, related_name='sent_messages', on_delete=models.CASCADE)
     content = models.TextField()
     is_read = models.BooleanField(default=False)
-    created_at = models.DateTimeField(default=timezone.now)
-    
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_read = models.BooleanField(default=False)
+
+
     class Meta:
         ordering = ['created_at']
     

@@ -68,14 +68,14 @@ urlpatterns = [
     path('api/accepted-conversations/', AcceptedConversationListView.as_view(), name='accepted-conversations'),
     path('api/follow/<int:user_id>/', views.api_follow_user, name='api-follow-user'),
     path('api/conversations/<int:pk>/', views.get_conversation, name='get-conversation'),
-    #path('api/messages/', views.conversation_messages, name='conversation-messages'),
+    path('api/messages/', views.conversation_messages, name='conversation-messages'),
     #path('api/send-message/', views.create_message, name='create-message'),
     path('api/auth/', include('rest_framework.urls')),
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('send-message/', views.send_message, name='send_message'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    # path('api/messaging/', include('messaging.urls')),  # Removed because 'messaging' module does not exist
-    path('api/messages/<int:conversation_id>/', ConversationMessagesView.as_view(), name='conversation-messages'),
+    #path('api/messaging/', include('messaging.urls')),  # Removed because 'messaging' module does not exist
+    #path('api/messages/<int:conversation_id>/', ConversationMessagesView.as_view(), name='conversation-messages'),
     path('api/send-message/', send_message, name='send-message'),
     path('api/messages/requests/', views.get_conversation_requests, name='conversation-request-list'),
     path('api/messages/requests/<int:request_id>/accept/', accept_message_request, name='accept-message-request'),

@@ -288,7 +288,7 @@ class ConversationRequest(models.Model):
         return f"{self.sender} -> {self.recipient}: {self.status}"
 
 class Message(models.Model):
-    conversation = models.ForeignKey(Conversation, related_name='messages', on_delete=models.CASCADE)
+    conversation = models.ForeignKey(ConversationRequest, related_name='messages', on_delete=models.CASCADE)
     sender = models.ForeignKey(User, related_name='sent_messages', on_delete=models.CASCADE)
     content = models.TextField()
     is_read = models.BooleanField(default=False)

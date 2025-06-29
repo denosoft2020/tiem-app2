@@ -68,7 +68,7 @@ urlpatterns = [
     path('api/accepted-conversations/', AcceptedConversationListView.as_view(), name='accepted-conversations'),
     path('api/follow/<int:user_id>/', views.api_follow_user, name='api-follow-user'),
     path('api/conversations/<int:pk>/', views.get_conversation, name='get-conversation'),
-    path('api/messages/', views.conversation_messages, name='conversation-messages'),
+    #path('api/messages/', views.conversation_messages, name='conversation-messages'),
     #path('api/send-message/', views.create_message, name='create-message'),
     path('api/auth/', include('rest_framework.urls')),
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),

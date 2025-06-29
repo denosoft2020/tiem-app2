@@ -526,6 +526,7 @@
             border-top: 1px solid var(--border);
             display: flex;
             gap: 10px;
+            margin-bottom: 50px;
         }
         
         .message-input {
@@ -755,11 +756,12 @@
         <div class="conversation-list" id="conversationList" style="display: none;">
             <div class="section-title">Conversation Requests</div>
             <div id="requestList">
-                <div class="empty-state" id="requestsLoading">
+                <div class="empty-state" id="requestsLoading" style="width: 10px; height: 10px;">
                     <div class="loading-spinner"></div>
                     <p>Loading requests...</p>
                 </div>
             </div>
+            
             
             <div class="section-title">Your Conversations</div>
             <div id="conversationItems">

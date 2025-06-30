@@ -13,41 +13,40 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ['id', 'username', 'first_name', 'last_name', 'email', 'is_active', 'is_staff', 'date_joined', 'last_login', 'profile']
 
 class NotificationSerializer(serializers.ModelSerializer):
-    sender = UserSerializer(read_only=True)
-    avatar_url = serializers.SerializerMethodField()
-    content_preview = serializers.SerializerMethodField()
-    content_type = serializers.CharField(source='content_type.model', read_only=True)
-    post_media_url = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = Notification
-        fields = ['id', 'sender', 'notification_type', 'message', 'is_read', 
-                  'created_at', 'avatar_url', 'content_preview', 'content_type',
-                  'object_id', 'post_media_url']
-    
-    def get_avatar_url(self, obj):
-        request = self.context.get('request')
-        if obj.sender.profile.profile_picture:
-            return request.build_absolute_uri(obj.sender.profile.profile_picture.url)
-        return None
-    
-    def get_content_preview(self, obj):
-        if obj.content_object and hasattr(obj.content_object, 'caption'):
-            return obj.content_object.caption[:100] + '...' if len(obj.content_object.caption) > 100 else obj.content_object.caption
-        return None
+    post_id = serializers.SerializerMethodField()
+    post_thumbnail_url = serializers.SerializerMethodField()
+    sender = serializers.SerializerMethodField()
 
     def get_sender(self, obj):
         profile = getattr(obj.sender, 'profile', None)
+        request = self.context.get('request')
+        pic = profile.profile_picture.url if profile and profile.profile_picture else None
         return {
-            "username": obj.sender.username,
-            "profile_picture": self.context['request'].build_absolute_uri(profile.profile_picture.url) if profile and profile.profile_picture else None
+            'id': obj.sender.id,
+            'username': obj.sender.username,
+            'profile_picture': request.build_absolute_uri(pic) if pic else None
         }
 
-    def get_post_media_url(self, obj):
-        if hasattr(obj.content_object, 'media_file'):
-            return self.context['request'].build_absolute_uri(obj.content_object.media_file.url)
+    def get_post_id(self, obj):
+        post = getattr(obj, 'content_object', None)
+        return post.id if post else None
+
+    def get_post_thumbnail_url(self, obj):
+        post = getattr(obj, 'content_object', None)
+        if post and hasattr(post, 'media_file') and post.media_file:
+            request = self.context.get('request')
+            return request.build_absolute_uri(post.media_file.url)
         return None
-    
+
+    class Meta:
+        model = Notification
+        fields = [
+            'id', 'sender', 'message', 'notification_type',
+            'created_at', 'is_read',
+            'post_id', 'post_thumbnail_url'
+        ]
+
+
 class ConversationRequestSerializer(serializers.ModelSerializer):
     sender = UserSerializer(read_only=True)
     recipient = UserSerializer(read_only=True)

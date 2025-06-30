@@ -737,7 +737,6 @@ class ConversationRequestListView(generics.ListAPIView):
             status='pending'
         ).select_related('sender', 'sender__profile').order_by('-created_at')
 
-
 class AcceptedConversationListView(generics.ListAPIView):
     serializer_class = ConversationSerializer
     permission_classes = [IsAuthenticated]

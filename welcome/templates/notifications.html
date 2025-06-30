@@ -242,7 +242,7 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
-            border-radius: 50%;
+            border-radius: 0%;
         }
         
         .notification-content {
@@ -687,6 +687,55 @@
             to { transform: rotate(360deg); }
         }
         
+        /* New styles for notification previews */
+        .notification-preview-container {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            background: var(--bg);
+            border-radius: var(--radius-sm);
+            padding: 12px;
+            border-left: 3px solid var(--primary);
+        }
+        
+        .post-thumbnail {
+            width: 80px;
+            height: 80px;
+            border-radius: 8px;
+            object-fit: cover;
+            border: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+        
+        .post-preview-content {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .post-preview-title {
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 4px;
+        }
+        
+        .post-preview-title a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+        
+        .post-preview-title a:hover {
+            text-decoration: underline;
+        }
+        
+        .post-preview-excerpt {
+            color: var(--text-light);
+            font-size: 14px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
         /* Responsive design */
         @media (max-width: 600px) {
             .notification-header {
@@ -705,6 +754,11 @@
             
             .message-container {
                 height: 300px;
+            }
+            
+            .post-thumbnail {
+                width: 60px;
+                height: 60px;
             }
         }
     </style>
@@ -1002,8 +1056,7 @@
                         <p>Loading notifications...</p>
                     </div>
                 `;
-                
-                // Fetch real notifications
+
                 fetch('/notifications/stream/?format=json', {
                     headers: {
                         'Content-Type': 'application/json'
@@ -1021,52 +1074,102 @@
                         `;
                         return;
                     }
-                    
+
                     notificationList.innerHTML = '';
-                    
-                    // Calculate unread count
                     unreadCount = data.filter(notification => !notification.is_read).length;
                     notificationBadge.textContent = unreadCount;
-                    
-                    // Render notifications
+
                     data.forEach(notification => {
                         const notificationElement = document.createElement('div');
                         notificationElement.classList.add('notification-item');
                         if (!notification.is_read) {
                             notificationElement.classList.add('unread');
                         }
-                        
+
                         const createdAt = new Date(notification.created_at);
                         const timeAgo = formatTimeAgo(createdAt);
-                        
-                        // Profile picture logic
+
+                        // Profile avatar with real profile picture
                         let avatarContent = '';
-                        if (notification.sender.avatar_url) {
-                            avatarContent = `<img src="${notification.sender.avatar_url}" alt="${notification.sender.username}">`;
+                        if (notification.sender.profile_picture) {
+                            avatarContent = `<a href="/profile/${notification.sender.username}/">
+                                <img src="${notification.sender.profile_picture}" alt="${notification.sender.username}" style="width:100%; height:100%; object-fit:cover;">
+                            </a>`;
                         } else {
-                            avatarContent = notification.sender.username.charAt(0).toUpperCase();
+                            avatarContent = `<a href="/profile/${notification.sender.username}/">
+                                ${notification.sender.username.charAt(0).toUpperCase()}
+                            </a>`;
                         }
-                        
-                        // Post preview with link
-                        const previewContent = notification.content_preview ? 
-                            `<a href="#" class="notification-preview">${notification.content_preview}</a>` : 
-                            '';
-                        
+
+                        // Post preview with thumbnail
+                        let postPreview = '';
+                        if (notification.post_id) {
+                            let thumbnailContent = '';
+                            if (notification.post_thumbnail_url) {
+                                thumbnailContent = `<img src="${notification.post_thumbnail_url}" alt="Post thumbnail" class="post-thumbnail">`;
+                            } else {
+                                // Fallback if no thumbnail
+                                thumbnailContent = `<div style="background:var(--primary-light); width:80px; height:80px; border-radius:8px; display:flex; align-items:center; justify-content:center;">
+                                    <i class="fas fa-image" style="color:var(--primary); font-size:24px;"></i>
+                                </div>`;
+                            }
+                           
+
+                            postPreview = `
+                                <div class="notification-preview-container">
+                                    ${thumbnailContent}
+                                    <div class="post-preview-content">
+                                        <div class="post-preview-title">
+                                            <a href="/post/${notification.post_id}/">View Post</a>
+                                        </div>
+                                        <div class="post-preview-excerpt">
+                                            ${notification.caption_excerpt || 'Click to view this post'}
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        // thumbnail
+                        let mediaPreview = '';
+                        if (notification.post_thumbnail_url) {
+                            const extension = notification.post_thumbnail_url.split('.').pop().toLowerCase();
+
+                            if (['mp4', 'webm', 'ogg'].includes(extension)) {
+                                // If it's a video file
+                                mediaPreview = `
+                                    <a href="/post/${notification.post_id}/" class="notification-preview">
+                                        <video width="100%" height="auto" controls muted preload="metadata" style="max-height: 200px; border-radius: 8px; object-fit: cover;">
+                                            <source src="${notification.post_thumbnail_url}" type="video/${extension}">
+                                            Your browser does not support the video tag.
+                                        </video>
+                                    </a>`;
+                            } else {
+                                // If it's an image file
+                                mediaPreview = `
+                                    <a href="/post/${notification.post_id}/" class="notification-preview">
+                                        <img src="${notification.post_thumbnail_url}" alt="Post preview"
+                                            style="width: 100%; max-height: 200px; border-radius: 8px; object-fit: cover;" 
+                                            onerror="this.style.display='none';" />
+                                    </a>`;
+                            }
+                        }
+
+
                         notificationElement.innerHTML = `
-                            <div class="notification-avatar">
-                                ${avatarContent}
-                            </div>
+                            <div class="notification-avatar">${avatarContent}</div>
                             <div class="notification-content">
                                 <div class="username">
-                                    ${notification.sender.username}
+                                    <a href="/profile/${notification.sender.username}/" style="text-decoration:none; color:inherit; font-weight:700;">
+                                        ${notification.sender.username}
+                                    </a>
                                     <div class="notification-type">${notification.notification_type}</div>
                                 </div>
                                 <div class="message">${notification.message}</div>
-                                ${previewContent}
+                                ${mediaPreview}
                                 <div class="time">${timeAgo}</div>
                             </div>
                         `;
-                        
+
                         notificationList.appendChild(notificationElement);
                     });
                 })

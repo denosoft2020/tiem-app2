@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1>Account Settings</h1>
+    
+    <div class="card mt-4">
+        <div class="card-body">
+            <h3>Account Information</h3>
+            <div class="mb-3">
+                <label class="form-label">Username</label>
+                <input type="text" class="form-control" value="{{ request.user.username }}" readonly>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Email</label>
+                <input type="email" class="form-control" value="{{ request.user.email }}">
+            </div>
+        </div>
+    </div>
+    
+    <div class="card mt-4">
+        <div class="card-body">
+            <h3>Change Password</h3>
+            <div class="mb-3">
+                <label class="form-label">Current Password</label>
+                <input type="password" class="form-control" placeholder="Enter current password" title="Current Password">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">New Password</label>
+                <input type="password" class="form-control">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Confirm New Password</label>
+                <input type="password" class="form-control">
+            </div>
+        </div>
+    </div>
+    
+    <div class="mt-4">
+        <button class="btn btn-primary">Save Changes</button>
+        <a href="{% url 'profile' username %}" class="btn btn-outline-secondary">Back to Profile</a>
+    </div>
+</div>
+{% endblock %}

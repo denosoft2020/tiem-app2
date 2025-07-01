@@ -1,7 +1,7 @@
 from decimal import ROUND_HALF_EVEN
 from django.shortcuts import render, redirect,  get_object_or_404
 from django.contrib.auth.models import User
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
 from django.forms import inlineformset_factory
 from django.contrib.auth.forms import UserCreationForm
@@ -19,6 +19,9 @@ from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.conf import settings
+from django.urls import reverse, reverse_lazy
+from django.views.generic import DetailView, DeleteView, TemplateView
+from django.contrib.auth.views import LogoutView
 import os
 import uuid
 from rest_framework import viewsets, generics, permissions, status
@@ -91,8 +94,6 @@ def home(request):
 def forgot_password(request):
     return render(request, 'forgot-password.html')
 
-
-@login_required
 @login_required
 def profile_view(request, username):
     user = get_object_or_404(User, username=username)
@@ -103,6 +104,11 @@ def profile_view(request, username):
         profile.profile_picture = 'profile_pictures/default_profile.jpg'
         profile.save()
     
+     # Check if current user is following this profile
+    is_following = False
+    if request.user.is_authenticated:
+        is_following = request.user.profile.follows.filter(id=profile.id).exists()
+
     # Get user posts
     posts = Post.objects.filter(user=user).order_by('-created_at')
     
@@ -115,10 +121,10 @@ def profile_view(request, username):
         'following_count': profile.follows.count(),
         'likes_count': Like.objects.filter(post__user=user).count(),
         'posts': posts[:12],  # Limit to 12 posts
+        'is_following': is_following,
     }
     
     return render(request, 'profile.html', context)
-
 
 @api_view(['POST'])
 @login_required
@@ -186,8 +192,6 @@ def save_post(request, post_id):
         post.saved_by.add(request.user)
         saved = True
     return JsonResponse({'saved': saved, 'count': post.saved_by.count()})
-
-
 
 @login_required
 @require_POST
@@ -334,6 +338,65 @@ class PostViewSet(viewsets.ModelViewSet):
         )
         return Response(status=status.HTTP_200_OK)
     
+class PostDetailView(DetailView):
+    model = Post
+    template_name = 'post_detail.html'
+    context_object_name = 'post'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['is_owner'] = self.request.user == self.object.user
+        return context
+
+class PrivacySettingsView(TemplateView):
+    template_name = 'privacy_settings.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['username'] = self.request.user.username
+        return context
+
+class PostDeleteView(DeleteView):
+    model = Post
+    
+    def get_success_url(self):
+        # Get the username from the current user
+        username = self.request.user.username
+        if not username:
+            # Fallback to current user's profile if username is empty
+            username = self.request.user.username
+        return reverse('profile', kwargs={'username': username})
+
+class AccountSettingsView(TemplateView):
+    template_name = 'account_settings.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['username'] = self.request.user.username
+        return context
+
+class SavedPostsView(TemplateView):
+    template_name = 'saved_posts.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['username'] = self.request.user.username
+        context['saved_posts'] = self.request.user.saved_posts.all()
+        return context
+
+class HelpCenterView(TemplateView):
+    template_name = 'help_center.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['username'] = self.request.user.username
+        return context
+
+@require_POST
+def custom_logout(request):
+    logout(request)
+    return redirect('welcome.html')
+
 class CommentViewSet(viewsets.ModelViewSet):
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer

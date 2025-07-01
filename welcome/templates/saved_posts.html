@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1>Saved Posts</h1>
+    
+    {% if saved_posts %}
+    <div class="posts-grid mt-4">
+        {% for post in saved_posts %}
+        <div class="post-item">
+            {% if post.content_type == 'image' %}
+                <img src="{{ post.media_file.url }}" alt="{{ post.caption|truncatechars:30 }}">
+            {% else %}
+                <video>
+                    <source src="{{ post.media_file.url }}" type="video/mp4">
+                </video>
+            {% endif %}
+            <div class="post-overlay">
+                <div class="post-stats">
+                    <span><i class="fas fa-heart"></i> {{ post.likes.count }}</span>
+                    <span><i class="fas fa-comment"></i> {{ post.comments.count }}</span>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center mt-5">
+        <i class="fas fa-bookmark fa-3x text-muted mb-3"></i>
+        <h3>No Saved Posts</h3>
+        <p>When you save posts, they'll appear here.</p>
+    </div>
+    {% endif %}
+    
+    <div class="mt-4">
+        <a href="{% url 'profile' username %}" class="btn btn-outline-secondary">Back to Profile</a>
+    </div>
+</div>
+{% endblock %}

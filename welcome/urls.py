@@ -4,7 +4,7 @@ from django.contrib.auth.views import LoginView, LogoutView
 from django.conf import settings
 from django.conf.urls.static import static
 from rest_framework.routers import DefaultRouter
-from .views import NotificationListView, NotificationDetailView, MarkNotificationAsRead, MarkAllNotificationsRead, ConversationListView, PostViewSet, FeedViewSet, ProfileViewSet, CommentViewSet, api_follow_user, ConversationRequestView, ConversationRequestActionView, accept_message_request, reject_message_request, MarkAllNotificationsRead, ConversationRequestListView, AcceptedConversationListView, ConversationMessagesView, send_message, get_conversation_requests
+from .views import NotificationListView, NotificationDetailView, MarkNotificationAsRead, MarkAllNotificationsRead, ConversationListView, PostViewSet, FeedViewSet, ProfileViewSet, CommentViewSet, api_follow_user, ConversationRequestView, ConversationRequestActionView, accept_message_request, reject_message_request, MarkAllNotificationsRead, ConversationRequestListView, AcceptedConversationListView, ConversationMessagesView, send_message, get_conversation_requests, PostDetailView, PostDeleteView, PrivacySettingsView, custom_logout, AccountSettingsView, SavedPostsView, HelpCenterView
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 
@@ -58,7 +58,6 @@ urlpatterns = [
     path('notifications/<int:pk>/', NotificationDetailView.as_view(), name='notification-detail'),
     path('api/notifications/mark_all_as_read/', MarkAllNotificationsRead.as_view(), name='mark-all-notifications-read'),
     path('api/users/<int:pk>/follow/', views.follow_user),
-    #path('api/messages/requests/', ConversationRequestView.as_view(), name='api-messages-requests'),
     path('notifications/stream/', NotificationListView.as_view(), name='notification-stream'),
     path('conversations/request/', ConversationRequestView.as_view(), name='conversation-request'),
     path('conversations/request/<int:pk>/action/', ConversationRequestActionView.as_view(), name='conversation-request-action'),
@@ -68,20 +67,23 @@ urlpatterns = [
     path('api/accepted-conversations/', AcceptedConversationListView.as_view(), name='accepted-conversations'),
     path('api/follow/<int:user_id>/', views.api_follow_user, name='api-follow-user'),
     path('api/conversations/<int:pk>/', views.get_conversation, name='get-conversation'),
-    #path('api/messages/', views.conversation_messages, name='conversation-messages'),
-    #path('api/send-message/', views.create_message, name='create-message'),
     path('api/auth/', include('rest_framework.urls')),
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('send-message/', views.send_message, name='send_message'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    #path('api/messaging/', include('messaging.urls')),  # Removed because 'messaging' module does not exist
-    #path('api/messages/<int:conversation_id>/', ConversationMessagesView.as_view(), name='conversation-messages'),
     path('api/send-message/', send_message, name='send-message'),
     path('api/messages/requests/', views.get_conversation_requests, name='conversation-request-list'),
     path('api/messages/requests/<int:request_id>/accept/', accept_message_request, name='accept-message-request'),
     path('api/messages/<int:conversation_id>/', views.get_conversation_messages),
     path('api/messages/requests/<int:request_id>/reject/', reject_message_request, name='reject-message-request'),
     path('api/messages/send/', views.send_message),
+    path('post/<int:pk>/', PostDetailView.as_view(), name='post_detail'),
+    path('post/<int:pk>/delete/', PostDeleteView.as_view(), name='post_delete'),
+    path('privacy-settings/', PrivacySettingsView.as_view(), name='privacy_settings'),
+    path('account-settings/', AccountSettingsView.as_view(), name='account_settings'),
+    path('saved-posts/', SavedPostsView.as_view(), name='saved_posts'),
+    path('help-center/', HelpCenterView.as_view(), name='help_center'),
+    path('logout/', custom_logout, name='logout'),
 ]
 
 if settings.DEBUG:

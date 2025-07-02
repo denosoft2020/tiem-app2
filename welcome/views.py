@@ -392,10 +392,10 @@ class HelpCenterView(TemplateView):
         context['username'] = self.request.user.username
         return context
 
-@require_POST
+@require_http_methods(["POST", "GET"])
 def custom_logout(request):
     logout(request)
-    return redirect('welcome.html')
+    return redirect('/')
 
 class CommentViewSet(viewsets.ModelViewSet):
     queryset = Comment.objects.all()
@@ -843,6 +843,17 @@ class mark_all_as_read(generics.GenericAPIView):
         return Response({
             'status': 'success',
             'updated_count': updated_count
+        })
+
+@login_required
+def get_or_create_conversation(request, user_id):
+    if request.method == 'GET':
+        other_user = get_object_or_404(User, id=user_id)
+        conversation, created = Conversation.objects.get_or_create_between(request.user, other_user)
+
+        return JsonResponse({
+            'conversation_id': conversation.id,
+            'username': other_user.username
         })
 
 @login_required

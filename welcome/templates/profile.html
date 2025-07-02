@@ -424,12 +424,11 @@
         
         document.addEventListener('DOMContentLoaded', function() {
             // Follow button functionality
-            const followBtn = document.getElementById('followBtn');
             if (followBtn) {
-                followBtn.addEventListener('click', async function() {
+                followBtn.addEventListener('click', async function () {
                     const userId = this.dataset.userId;
                     const isFollowing = this.textContent === 'Following';
-                    
+
                     try {
                         const csrftoken = getCookie('csrftoken');
                         const response = await fetch(`/api/follow/${userId}/`, {
@@ -442,23 +441,24 @@
                                 action: isFollowing ? 'unfollow' : 'follow'
                             })
                         });
-                        
+
                         if (response.ok) {
                             const result = await response.json();
                             this.textContent = result.isFollowing ? 'Following' : 'Follow';
-                            
-                            // Update followers count
+                            this.dataset.isFollowing = result.isFollowing ? 'true' : 'false';
+
                             const followersElement = document.querySelector('.stat:nth-child(2) .stat-number');
                             if (followersElement) {
                                 followersElement.textContent = result.followers_count;
                             }
                         }
                     } catch (error) {
-                        console.error('Error:', error);
+                        console.error('Follow error:', error);
                         showToast('Failed to follow user');
                     }
                 });
             }
+
             
             // Message button functionality
             const messageBtn = document.getElementById('messageBtn');

@@ -1,6 +1,6 @@
 from django.urls import path, include
 from . import views
-from django.contrib.auth.views import LoginView, LogoutView
+from django.contrib.auth.views import LoginView
 from django.conf import settings
 from django.conf.urls.static import static
 from rest_framework.routers import DefaultRouter
@@ -29,7 +29,6 @@ urlpatterns = [
     path('api/create_stream/', views.create_stream, name='create_stream'),
     path('api/end_stream/', views.end_stream, name='end_stream'),
     #path('watch/<int:stream_id>/', views.watch_live, name='watch_live'),
-    path('logout/', LogoutView.as_view(), name='logout'),
     path('profile/', views.my_profile, name='my-profile'),
     path('profile/<str:username>/', views.profile_view, name='profile'),
     path('users/<int:pk>/', ProfileViewSet.as_view(
@@ -77,13 +76,14 @@ urlpatterns = [
     path('api/messages/<int:conversation_id>/', views.get_conversation_messages),
     path('api/messages/requests/<int:request_id>/reject/', reject_message_request, name='reject-message-request'),
     path('api/messages/send/', views.send_message),
+    path('api/messages/<int:user_id>/', views.get_or_create_conversation, name='get_or_create_conversation'),
     path('post/<int:pk>/', PostDetailView.as_view(), name='post_detail'),
     path('post/<int:pk>/delete/', PostDeleteView.as_view(), name='post_delete'),
     path('privacy-settings/', PrivacySettingsView.as_view(), name='privacy_settings'),
     path('account-settings/', AccountSettingsView.as_view(), name='account_settings'),
     path('saved-posts/', SavedPostsView.as_view(), name='saved_posts'),
     path('help-center/', HelpCenterView.as_view(), name='help_center'),
-    path('logout/', custom_logout, name='logout'),
+    path('logout/', views.custom_logout, name='logout'),
 ]
 
 if settings.DEBUG:

@@ -572,27 +572,9 @@
             <a href="#" class="tab-button" data-tab="live">
                 <i class="fas fa-signal"></i> Live
             </a>
-            <button id="searchToggle" class="tab-button" title="Search">
-                <i class="fas fa-search"></i>
-            </button>
         </div>
 
         <!-- Search Container -->
-        <div class="search-container" id="searchContainer">
-            <div class="search-header">
-                <h3>Search</h3>
-                <button class="close-search" id="closeSearch">&times;</button>
-            </div>
-            
-            <div class="search-input-container">
-                <input type="text" class="search-input" id="searchInput" placeholder="Search users or content...">
-                <button class="post-comment-btn" id="performSearch">Search</button>
-            </div>
-            
-            <div class="search-results" id="searchResults">
-                <div class="no-results">Search for users or content</div>
-            </div>
-        </div>
 
         <div class="video-feed" id="videoFeed"></div>
 
@@ -919,55 +901,10 @@
         }
 
         // Search function
-        async function performSearch(query) {
-            try {
-                document.getElementById('searchResults').innerHTML = '<div class="no-results">Searching...</div>';
-                
-                const response = await fetch(`/api/search/?q=${encodeURIComponent(query)}`);
-                if (!response.ok) throw new Error('Failed to search');
-                
-                const results = await response.json();
-                renderSearchResults(results);
-            } catch (error) {
-                console.error('Error searching:', error);
-                document.getElementById('searchResults').innerHTML = '<div class="no-results">Failed to load results</div>';
-            }
-        }
+        
 
         // Render search results
-        function renderSearchResults(results) {
-            const container = document.getElementById('searchResults');
-            container.innerHTML = '';
-            
-            if (results.length === 0) {
-                container.innerHTML = '<div class="no-results">No results found</div>';
-                return;
-            }
-            
-            results.forEach(result => {
-                const resultElement = document.createElement('div');
-                resultElement.className = 'search-result-item';
-                
-                const profilePic = result.profile_picture ? 
-                    `<img src="${result.profile_picture}" class="search-result-pic" alt="@${result.username}">` : 
-                    `<div class="search-result-pic default-profile-pic">${result.username[0].toUpperCase()}</div>`;
-                
-                resultElement.innerHTML = `
-                    ${profilePic}
-                    <div class="search-result-info">
-                        <div class="search-result-username">@${result.username}</div>
-                        ${result.full_name ? `<div class="search-result-name">${result.full_name}</div>` : ''}
-                    </div>
-                `;
-                
-                // Make result clickable
-                resultElement.addEventListener('click', () => {
-                    window.location.href = `/profile/${result.username}`;
-                });
-                
-                container.appendChild(resultElement);
-            });
-        }
+       
 
         // Download media file
         async function downloadMedia(mediaUrl, filename) {

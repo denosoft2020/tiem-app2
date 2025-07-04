@@ -32,8 +32,9 @@
             <label for="confirmPassword">Confirm Password</label>
             <input type="password" id="confirmPassword" name="confirmPassword" required>
             
-            <label>
-                <input type="checkbox" id="acceptLicense"> I accept the terms and conditions
+            <label class="terms-label">
+                <input type="checkbox" id="acceptLicense" name="acceptLicense" required>
+                I accept the <a href="{% url 'terms' %}" target="_blank">terms and conditions</a>
             </label>
             
             <button type="submit">Create Account</button>

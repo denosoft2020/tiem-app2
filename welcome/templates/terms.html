@@ -1,0 +1,70 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terms and Conditions</title>
+    <link rel="stylesheet" href="{% static 'css/terms.css' %}">
+</head>
+<body>
+    <div class="terms-container">
+        <h1>Terms and Conditions</h1>
+        
+        <div class="terms-content">
+            <p><strong>Last Updated:</strong> July 4, 2025</p>
+            
+            <section>
+                <h2>1. Acceptance of Terms</h2>
+                <p>By accessing or using our services, you agree to be bound by these Terms...</p>
+            </section>
+            
+            <section>
+                <h2>2. User Accounts</h2>
+                <p>You are responsible for maintaining the confidentiality of your account...</p>
+            </section>
+            
+            <section>
+                <h2>3. Content Ownership</h2>
+                <p>You retain ownership of any content you post on our platform...</p>
+            </section>
+            
+            <section>
+                <h2>4. Prohibited Conduct</h2>
+                <p>You agree not to:</p>
+                <ul>
+                    <li>Post illegal, harmful, or offensive content</li>
+                    <li>Harass or bully other users</li>
+                    <li>Impersonate others</li>
+                    <li>Violate intellectual property rights</li>
+                    <li>Use automated systems to access our services</li>
+                </ul>
+            </section>
+            
+            <section>
+                <h2>5. Privacy</h2>
+                <p>Your privacy is important to us. Please review our Privacy Policy...</p>
+            </section>
+            
+            <section>
+                <h2>6. Termination</h2>
+                <p>We may terminate or suspend your account at any time for violations...</p>
+            </section>
+            
+            <section>
+                <h2>7. Changes to Terms</h2>
+                <p>We may update these Terms from time to time...</p>
+            </section>
+            
+            <section>
+                <h2>8. Contact Us</h2>
+                <p>If you have any questions about these Terms, please contact us at support@tiem.com</p>
+            </section>
+        </div>
+        
+        <div class="terms-footer">
+            <a href="{% url 'signin' %}" class="back-button">Back to Sign Up</a>
+        </div>
+    </div>
+</body>
+</html>

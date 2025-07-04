@@ -7,7 +7,8 @@ document.addEventListener("DOMContentLoaded", function() {
         const password = document.getElementById("password").value.trim();
         const confirmPassword = document.getElementById("confirmPassword").value.trim();
         const acceptLicense = document.getElementById("acceptLicense").checked;
-        
+        const signupForm = document.querySelector('form');
+
         // Validate email format
         const emailPattern = /^[^ ]+@[^ ]+\.[a-z]{2,3}$/;
         if (!email.match(emailPattern)) {
@@ -39,4 +40,13 @@ document.addEventListener("DOMContentLoaded", function() {
         const buffer = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
         return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join('');
     }
+
+    signupForm.addEventListener('submit', function(e) {
+        const termsCheckbox = document.getElementById('acceptLicense');
+        
+        if (!termsCheckbox.checked) {
+            alert('You must accept the terms and conditions to sign up');
+            e.preventDefault();
+        }
+    });
 });

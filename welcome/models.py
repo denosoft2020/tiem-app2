@@ -25,7 +25,7 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 
 
-#from .serializers import VideoSerializer
+
 
 
 
@@ -37,11 +37,13 @@ def cover_photo_path(instance, filename):
     # file will be uploaded to MEDIA_ROOT/cover_photos/user_<id>/<filename>
     return f'cover_photos/user_{instance.user.id}/{filename}'
 
-
-
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     bio = models.TextField(max_length=500, blank=True)
+    is_private = models.BooleanField(default=False)
+    show_activity = models.BooleanField(default=True)
+    location = models.CharField(max_length=100, blank=True, null=True)
+    website = models.URLField(blank=True, null=True)
     profile_picture = models.ImageField(
         upload_to='profile_pictures/',
         default='profile_pictures/default_profile.jpg'
@@ -87,24 +89,16 @@ class FollowRelationship(models.Model):
     def __str__(self):
         return f'{self.follower} follows {self.following}'
     
-
-# following
-
-
-
-
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
     if created:
         Profile.objects.create(user=instance)
 
+
 def user_directory_path(instance, filename):
     ext = filename.split('.')[-1]
     filename = f"{uuid.uuid4()}.{ext}"
     return os.path.join('uploads', filename)
-
-# Model to store uploaded files (both images and videos)
-# Django Model
 
 class Post(models.Model):
     CONTENT_TYPES = (
@@ -178,15 +172,12 @@ class UserInteraction(models.Model):
             models.Index(fields=['user', 'interaction_type', 'timestamp']),
         ]
    
-
 def create_or_update_user_profile(sender, instance, created, **kwargs):
     if created:
         Profile.objects.create(user=instance)
     instance.profile.save()
 
 User = get_user_model()
-
-
 
 class Following(models.Model):
     user = models.ForeignKey(
@@ -310,4 +301,3 @@ class LiveStream(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
 
-#uploading a post from upload page

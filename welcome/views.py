@@ -1,7 +1,7 @@
 from decimal import ROUND_HALF_EVEN
 from django.shortcuts import render, redirect,  get_object_or_404
 from django.contrib.auth.models import User
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib import messages
 from django.forms import inlineformset_factory
 from django.contrib.auth.forms import UserCreationForm
@@ -10,7 +10,7 @@ import json
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from .models import Profile, Post, Notification, Message, LiveStream, UserInteraction, Hashtag, Like, Comment, User, ConversationRequest, Conversation
-from .forms import ProfileUpdateForm, ProfilePictureForm
+from .forms import ProfileUpdateForm, ProfilePictureForm, EmailChangeForm, CustomPasswordChangeForm, PrivacySettingsForm, SupportForm
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.cache import cache_page
@@ -31,6 +31,7 @@ from rest_framework.renderers import JSONRenderer, TemplateHTMLRenderer
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view, action, permission_classes
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.pagination import PageNumberPagination
 from rest_framework import serializers
 from .serializers import NotificationSerializer, MessageSerializer, ConversationRequestSerializer, ConversationSerializer
 from django.contrib.auth import get_user_model
@@ -65,6 +66,11 @@ def signin(request):
         password = request.POST["password"].strip()
         confirmPassword = request.POST["confirmPassword"].strip()
 
+        terms_accepted = request.POST.get('acceptLicense') == 'on'
+        if not terms_accepted:
+            messages.error(request, "You must accept the terms and conditions")
+            return redirect("signin")
+
         if password != confirmPassword:
             messages.error(request, "Passwords do not match!")
             return redirect("signin")
@@ -77,8 +83,13 @@ def signin(request):
             messages.error(request, "Email already registered!")
             return redirect("signin")
 
-        user = User.objects.create_user(username=username, email=email, password=password)
-        user.save()
+        user = User(username=username, email=email)
+        user.set_password(password)
+        user.save() 
+
+         # Check if profile was created
+        if not hasattr(user, 'profile'):
+            Profile.objects.create(user=user)
 
         login(request, user)  # Log the user in after signing up
         messages.success(request, "Account created successfully!")
@@ -86,6 +97,8 @@ def signin(request):
 
     return render(request, "sign-in.html")
 
+def terms_and_conditions(request):
+    return render(request, 'terms.html')
 
 @login_required
 def home(request):
@@ -98,12 +111,6 @@ def forgot_password(request):
 def profile_view(request, username):
     user = get_object_or_404(User, username=username)
     profile = get_object_or_404(Profile, user=user)
-    
-    # Handle default profile picture
-    if not profile.profile_picture:
-        profile.profile_picture = 'profile_pictures/default_profile.jpg'
-        profile.save()
-    
      # Check if current user is following this profile
     is_following = False
     if request.user.is_authenticated:
@@ -338,59 +345,88 @@ class PostViewSet(viewsets.ModelViewSet):
         )
         return Response(status=status.HTTP_200_OK)
     
-class PostDetailView(DetailView):
-    model = Post
-    template_name = 'post_detail.html'
-    context_object_name = 'post'
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['is_owner'] = self.request.user == self.object.user
-        return context
 
-class PrivacySettingsView(TemplateView):
-    template_name = 'privacy_settings.html'
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['username'] = self.request.user.username
-        return context
+@login_required
+def account_settings(request):
+    email_form = EmailChangeForm(instance=request.user)
+    password_form = CustomPasswordChangeForm(user=request.user)
+    success_message = None
 
-class PostDeleteView(DeleteView):
-    model = Post
-    
-    def get_success_url(self):
-        # Get the username from the current user
-        username = self.request.user.username
-        if not username:
-            # Fallback to current user's profile if username is empty
-            username = self.request.user.username
-        return reverse('profile', kwargs={'username': username})
+    if request.method == 'POST':
+        if 'email_submit' in request.POST:
+            email_form = EmailChangeForm(request.POST, instance=request.user)
+            if email_form.is_valid():
+                email_form.save()
+                messages.success(request, 'Email updated successfully!')
+                return redirect('account_settings')
+                
+        elif 'password_submit' in request.POST:
+            password_form = CustomPasswordChangeForm(user=request.user, data=request.POST)
+            if password_form.is_valid():
+                try:
+                    user = password_form.save()
+                    update_session_auth_hash(request, user)
+                    messages.success(request, 'Password updated successfully!')
+                    return redirect('account_settings')
+                except Exception as e:
+                    messages.error(request, f'Error updating password: {str(e)}')
 
-class AccountSettingsView(TemplateView):
-    template_name = 'account_settings.html'
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['username'] = self.request.user.username
-        return context
 
-class SavedPostsView(TemplateView):
-    template_name = 'saved_posts.html'
     
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['username'] = self.request.user.username
-        context['saved_posts'] = self.request.user.saved_posts.all()
-        return context
+    context = {
+        'email_form': email_form,
+        'password_form': password_form
+    }
+    return render(request, 'account_settings.html', context)
 
-class HelpCenterView(TemplateView):
-    template_name = 'help_center.html'
+@login_required
+def privacy_settings(request):
+    profile = request.user.profile
+    form = PrivacySettingsForm(instance=profile)
     
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['username'] = self.request.user.username
-        return context
+    if request.method == 'POST':
+        form = PrivacySettingsForm(request.POST, instance=profile)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Privacy settings updated!')
+            return redirect('privacy_settings')
+    
+    return render(request, 'privacy_settings.html', {'form': form})
+
+@login_required
+def help_center(request):
+    form = SupportForm()
+    
+    if request.method == 'POST':
+        form = SupportForm(request.POST)
+        if form.is_valid():
+            # Process support request (send email/save to DB)
+            messages.success(request, 'Your message has been sent to support!')
+            return redirect('help_center')
+    
+    return render(request, 'help_center.html', {'form': form})
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_post(request, post_id):
+    try:
+        post = Post.objects.get(id=post_id)
+        if request.user != post.user:
+            return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+        
+        # Delete associated media file from storage
+        if post.media_file:
+            file_path = post.media_file.path
+            if default_storage.exists(file_path):
+                default_storage.delete(file_path)
+        
+        post.delete()
+        return Response({'success': True}, status=status.HTTP_200_OK)
+    except Post.DoesNotExist:
+        return Response({'error': 'Post not found'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger.error(f"Error deleting post: {str(e)}")
+        return Response({'error': 'Internal server error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @require_http_methods(["POST", "GET"])
 def custom_logout(request):
@@ -479,15 +515,11 @@ def upload_media(request):
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 #for mentions and hashtags on upload page
-def get_users(request):
-    users = User.objects.all().values('id', 'username')
-    return JsonResponse(list(users), safe=False)
-#for mentions and hashtags on upload page
 @cache_page(60 * 15)  # Cache for 15 minutes
 def get_users(request):
     users = User.objects.all().values('id', 'username')
     return JsonResponse(list(users), safe=False)
-# views.py
+
 @cache_page(60 * 15)
 def get_hashtags(request):
     query = request.GET.get('q', '')
@@ -499,9 +531,6 @@ def search_users(request):
     query = request.GET.get('q', '')
     users = User.objects.filter(username__icontains=query).values('username')
     return JsonResponse(list(users), safe=False)
-
-
-from rest_framework.pagination import PageNumberPagination
 
 class FeedPagination(PageNumberPagination):
     page_size = 10
@@ -845,6 +874,7 @@ class mark_all_as_read(generics.GenericAPIView):
             'updated_count': updated_count
         })
 
+#unused get_or_create_conversation function
 @login_required
 def get_or_create_conversation(request, user_id):
     if request.method == 'GET':

@@ -4,7 +4,7 @@ from django.contrib.auth.views import LoginView
 from django.conf import settings
 from django.conf.urls.static import static
 from rest_framework.routers import DefaultRouter
-from .views import NotificationListView, NotificationDetailView, MarkNotificationAsRead, MarkAllNotificationsRead, ConversationListView, PostViewSet, FeedViewSet, ProfileViewSet, CommentViewSet, api_follow_user, ConversationRequestView, ConversationRequestActionView, accept_message_request, reject_message_request, MarkAllNotificationsRead, ConversationRequestListView, AcceptedConversationListView, ConversationMessagesView, send_message, get_conversation_requests, PostDetailView, PostDeleteView, PrivacySettingsView, custom_logout, AccountSettingsView, SavedPostsView, HelpCenterView
+from .views import NotificationListView, NotificationDetailView, MarkNotificationAsRead, MarkAllNotificationsRead, ConversationListView, PostViewSet, FeedViewSet, ProfileViewSet, CommentViewSet, api_follow_user, ConversationRequestView, ConversationRequestActionView, accept_message_request, reject_message_request, MarkAllNotificationsRead, ConversationRequestListView, AcceptedConversationListView, send_message, get_conversation_requests, custom_logout, delete_post
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 
@@ -19,6 +19,7 @@ router.register(r'comments', CommentViewSet, basename='comment')
 urlpatterns = [
     path('', views.welcome),
     path('signin/', views.signin, name='signin'),
+    path('terms/', views.terms_and_conditions, name='terms'),
     path('login/', LoginView.as_view(template_name='log-in.html'), name='login'),
     path('forgot_password/', views.forgot_password, name = 'forgot_password'),
     path('feed/', views.feed, name='feed'),
@@ -77,13 +78,11 @@ urlpatterns = [
     path('api/messages/requests/<int:request_id>/reject/', reject_message_request, name='reject-message-request'),
     path('api/messages/send/', views.send_message),
     path('api/messages/<int:user_id>/', views.get_or_create_conversation, name='get_or_create_conversation'),
-    path('post/<int:pk>/', PostDetailView.as_view(), name='post_detail'),
-    path('post/<int:pk>/delete/', PostDeleteView.as_view(), name='post_delete'),
-    path('privacy-settings/', PrivacySettingsView.as_view(), name='privacy_settings'),
-    path('account-settings/', AccountSettingsView.as_view(), name='account_settings'),
-    path('saved-posts/', SavedPostsView.as_view(), name='saved_posts'),
-    path('help-center/', HelpCenterView.as_view(), name='help_center'),
+    path('api/delete-post/<int:post_id>/', views.delete_post, name='delete_post'),
     path('logout/', views.custom_logout, name='logout'),
+    path('account/settings/', views.account_settings, name='account_settings'),
+    path('privacy/settings/', views.privacy_settings, name='privacy_settings'),
+    path('help/center/', views.help_center, name='help_center'),
 ]
 
 if settings.DEBUG:

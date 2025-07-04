@@ -5,41 +5,95 @@
 <div class="container mt-5">
     <h1>Account Settings</h1>
     
+    <!-- Add this at the top to display form errors -->
+    {% if password_form.errors %}
+    <div class="alert alert-danger">
+        <strong>Error:</strong>
+        {% for field, errors in password_form.errors.items %}
+            {% for error in errors %}
+                {{ error }}<br>
+            {% endfor %}
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Account Information -->
     <div class="card mt-4">
         <div class="card-body">
             <h3>Account Information</h3>
-            <div class="mb-3">
-                <label class="form-label">Username</label>
-                <input type="text" class="form-control" value="{{ request.user.username }}" readonly>
-            </div>
-            <div class="mb-3">
-                <label class="form-label">Email</label>
-                <input type="email" class="form-control" value="{{ request.user.email }}">
-            </div>
+            <form method="post">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label">Username</label>
+                    <input type="text" class="form-control" value="{{ request.user.username }}" readonly>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    {{ email_form.email }}
+                </div>
+                <button type="submit" name="email_submit" class="btn btn-primary">Update Email</button>
+            </form>
         </div>
     </div>
     
+    <!-- Change Password -->
     <div class="card mt-4">
         <div class="card-body">
             <h3>Change Password</h3>
-            <div class="mb-3">
-                <label class="form-label">Current Password</label>
-                <input type="password" class="form-control" placeholder="Enter current password" title="Current Password">
-            </div>
-            <div class="mb-3">
-                <label class="form-label">New Password</label>
-                <input type="password" class="form-control">
-            </div>
-            <div class="mb-3">
-                <label class="form-label">Confirm New Password</label>
-                <input type="password" class="form-control">
-            </div>
+            <form method="post">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label">Current Password</label>
+                    <input 
+                        type="password" 
+                        class="form-control {% if password_form.old_password.errors %}is-invalid{% endif %}" 
+                        name="old_password"
+                        placeholder="Enter current password">
+                    {% if password_form.old_password.errors %}
+                        <div class="invalid-feedback">
+                            {{ password_form.old_password.errors.0 }}
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">New Password</label>
+                    <input 
+                        type="password" 
+                        class="form-control {% if password_form.new_password1.errors %}is-invalid{% endif %}" 
+                        name="new_password1">
+                    {% if password_form.new_password1.errors %}
+                        <div class="invalid-feedback">
+                            {{ password_form.new_password1.errors.0 }}
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Confirm New Password</label>
+                    <input 
+                        type="password" 
+                        class="form-control {% if password_form.new_password2.errors %}is-invalid{% endif %}" 
+                        name="new_password2">
+                    {% if password_form.new_password2.errors %}
+                        <div class="invalid-feedback">
+                            {{ password_form.new_password2.errors.0 }}
+                        </div>
+                    {% endif %}
+                </div>
+                <button type="submit" name="password_submit" class="btn btn-primary">Update Password</button>
+            </form>
         </div>
+
+        {% if messages %}
+        <div class="alert alert-success">
+            {% for message in messages %}
+            {{ message }}
+            {% endfor %}
+        </div>
+        {% endif %}
     </div>
     
     <div class="mt-4">
-        <button class="btn btn-primary">Save Changes</button>
-        <a href="{% url 'profile' username %}" class="btn btn-outline-secondary">Back to Profile</a>
+        <a href="{% url 'profile' request.user.username %}" class="btn btn-outline-secondary">Back to Profile</a>
     </div>
 </div>
 {% endblock %}

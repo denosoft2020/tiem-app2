@@ -282,133 +282,474 @@
         }
         
         /* Comment Section - Enhanced */
+        /* Modernized Comment Section */
         .comment-section {
-            display: none;
             position: fixed;
-            bottom: 0;
+            top: 0;
             left: 0;
             right: 0;
-            background: white;
+            bottom: 0;
+            background: #fafafa;
             z-index: 1000;
-            padding: 15px;
-            border-top-left-radius: 20px;
-            border-top-right-radius: 20px;
-            box-shadow: 0 -5px 15px rgba(0,0,0,0.1);
-            max-height: 80vh;
+            padding: 0;
             overflow-y: auto;
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+            visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            border-radius: 16px 16px 0 0;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
         }
-        
+
+        .comment-section.active {
+            transform: translateY(0);
+            visibility: visible;
+        }
+
         .comment-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #eee;
+            padding: 15px;
+            position: sticky;
+            top: 0;
+            background: white;
+            z-index: 10;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            border-radius: 16px 16px 0 0;
         }
-        
+
         .close-comments {
             background: none;
             border: none;
             font-size: 1.5rem;
             cursor: pointer;
             color: #666;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
         }
-        
+
+        .close-comments:hover {
+            background: #f5f5f5;
+        }
+
         .comments-container {
-            margin: 15px 0;
+            padding: 15px;
+            flex: 1;
+            overflow-y: auto;
+            background: #fafafa;
         }
-        
+
         .comment {
             display: flex;
-            margin-bottom: 15px;
+            margin-bottom: 16px;
             position: relative;
+            transition: background 0.2s;
+            padding: 12px;
+            border-radius: 16px;
+            background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
         }
-        
+
+        .comment:hover {
+            background: #f9f9f9;
+        }
+
         .comment-user-pic {
-            width: 32px;
-            height: 32px;
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
-            margin-right: 10px;
+            margin-right: 12px;
             object-fit: cover;
-            border: 1px solid #ddd;
+            flex-shrink: 0;
+            border: 1px solid #f0f0f0;
+            background: linear-gradient(135deg, #3498db, #8e44ad);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
         }
-        
+
         .comment-content {
             flex: 1;
         }
-        
+
         .comment-username {
-            font-weight: bold;
+            font-weight: 600;
             margin-bottom: 5px;
             color: #262626;
             text-decoration: none;
             display: block;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
-        
+
+        .comment-username .verified-badge {
+            color: #3897f0;
+            font-size: 14px;
+        }
+
         .comment-text {
             margin-bottom: 5px;
             line-height: 1.4;
+            font-size: 15px;
+            color: #333;
+            padding-right: 15px;
         }
-        
+
         .comment-time {
             font-size: 12px;
-            color: #666;
+            color: #8e8e8e;
+            margin-top: 4px;
         }
-        
+
         .comment-actions {
             display: flex;
             gap: 15px;
-            margin-top: 5px;
+            margin-top: 8px;
             font-size: 12px;
-            color: #666;
+            color: #8e8e8e;
+            align-items: center;
         }
-        
+
         .comment-action {
             cursor: pointer;
             transition: color 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: 500;
         }
-        
+
         .comment-action:hover {
             color: #3897f0;
         }
-        
+
+        .comment-action.liked {
+            color: #ff3040;
+        }
+
+        .comment-action i {
+            font-size: 14px;
+        }
+
         .reply-container {
             margin-left: 40px;
             margin-top: 10px;
-            padding-left: 10px;
-            border-left: 2px solid #ddd;
+            padding-left: 12px;
+            border-left: 2px solid #e0e0e0;
         }
-        
+
+        .reply-container .comment {
+            background: #f8f9fa;
+            margin-bottom: 10px;
+        }
+
+        .nested-comments {
+            margin-left: 40px;
+            padding-left: 12px;
+            border-left: 2px solid #e0e0e0;
+        }
+
+        .view-replies-btn {
+            display: flex;
+            align-items: center;
+            color: #65676b;
+            background: none;
+            border: none;
+            padding: 5px 0;
+            font-size: 13px;
+            cursor: pointer;
+            gap: 5px;
+            margin-top: 5px;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .view-replies-btn:hover {
+            color: #3897f0;
+        }
+
+        .view-replies-btn i {
+            font-size: 10px;
+            transition: transform 0.2s;
+        }
+
+        .view-replies-btn.expanded i {
+            transform: rotate(180deg);
+        }
+
         .add-comment {
             display: flex;
-            gap: 10px;
-            margin-top: 15px;
-            padding-top: 10px;
+            gap: 12px;
+            padding: 12px 15px;
             border-top: 1px solid #eee;
+            position: sticky;
+            bottom: 0;
+            background: white;
+            z-index: 10;
+            box-shadow: 0 -1px 3px rgba(0,0,0,0.05);
         }
-        
-        .comment-input {
+
+        .comment-input-container {
             flex: 1;
-            padding: 10px 15px;
-            border-radius: 20px;
-            border: 1px solid #ddd;
-            outline: none;
-            font-size: 14px;
+            position: relative;
+            display: flex;
+            align-items: center;
         }
-        
+
+        .comment-input {
+            width: 100%;
+            padding: 12px 50px 12px 16px;
+            border-radius: 24px;
+            border: 1px solid #e0e0e0;
+            outline: none;
+            font-size: 15px;
+            background: #f0f2f5;
+            transition: all 0.2s;
+        }
+
+        .comment-input:focus {
+            border-color: #3897f0;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(56, 151, 240, 0.1);
+        }
+
+        .emoji-btn {
+            position: absolute;
+            right: 10px;
+            background: none;
+            border: none;
+            color: #65676b;
+            font-size: 20px;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+
+        .emoji-btn:hover {
+            background: #e9ecef;
+        }
+
         .post-comment-btn {
             background: #3897f0;
             color: white;
             border: none;
-            border-radius: 20px;
+            border-radius: 24px;
             padding: 0 20px;
             cursor: pointer;
             font-weight: 600;
             transition: background 0.2s;
+            height: 40px;
+            align-self: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 80px;
+            font-size: 15px;
         }
-        
-        .post-comment-btn:hover {
+
+        .post-comment-btn:disabled {
+            background: #b2dffc;
+            cursor: not-allowed;
+        }
+
+        .post-comment-btn:hover:not(:disabled) {
             background: #2680d9;
+        }
+
+        .replies-count {
+            color: #65676b;
+            font-size: 13px;
+            margin-top: 5px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: 500;
+        }
+
+        .replies-count::before {
+            content: "";
+            display: inline-block;
+            width: 20px;
+            height: 1px;
+            background: #ddd;
+            margin-right: 5px;
+        }
+
+        .no-comments {
+            text-align: center;
+            padding: 30px 0;
+            color: #8e8e8e;
+            font-size: 15px;
+        }
+
+        .replying-to {
+            background: #f0f2f5;
+            color: #65676b;
+            border-radius: 16px;
+            padding: 8px 12px;
+            font-size: 13px;
+            margin-bottom: 8px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: 500;
+        }
+
+        .replying-to .close-reply {
+            background: none;
+            border: none;
+            color: #8e8e8e;
+            cursor: pointer;
+            font-size: 14px;
+            margin-left: 5px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+
+        .replying-to .close-reply:hover {
+            background: #e9ecef;
+        }
+
+        .comment-divider {
+            height: 1px;
+            background: #eee;
+            margin: 15px 0;
+        }
+
+        .comment-reply-form {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            align-items: center;
+        }
+
+        .comment-reply-input {
+            flex: 1;
+            padding: 8px 15px;
+            border-radius: 20px;
+            border: 1px solid #ddd;
+            outline: none;
+            font-size: 14px;
+            background: #f0f2f5;
+        }
+
+        .post-reply-btn {
+            background: #3897f0;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 0 15px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s;
+            height: 36px;
+        }
+
+        .post-reply-btn:disabled {
+            background: #b2dffc;
+            cursor: not-allowed;
+        }
+
+        .post-reply-btn:hover:not(:disabled) {
+            background: #2680d9;
+        }
+
+        .reply-indicator {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 13px;
+            color: #8e8e8e;
+            margin-top: 5px;
+        }
+
+        .comment.reply {
+            margin-left: 40px;
+            border-left: 2px solid #ddd;
+            padding-left: 10px;
+        }
+
+        .replying-indicator-container {
+            margin-bottom: 10px;
+            display: none;
+            padding: 0 15px;
+        }
+
+        .comment-reply-form {
+            display: none;
+            margin-top: 10px;
+        }
+
+        .comment.has-replies {
+            margin-bottom: 20px;
+        }
+
+        .replies-container {
+            display: none;
+            margin-top: 10px;
+        }
+
+        .replies-container.expanded {
+            display: block;
+        }
+
+        /* Modern scrollbar for comments container */
+        .comments-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .comments-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .comments-container::-webkit-scrollbar-thumb {
+            background: #d0d0d0;
+            border-radius: 3px;
+        }
+
+        .comments-container::-webkit-scrollbar-thumb:hover {
+            background: #a0a0a0;
+        }
+
+        /* Comment input placeholder styling */
+        .comment-input::placeholder {
+            color: #8e8e8e;
+            opacity: 1;
+        }
+
+        /* Like animation */
+        @keyframes likeAnimation {
+            0% { transform: scale(1); }
+            25% { transform: scale(1.2); }
+            50% { transform: scale(0.9); }
+            75% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .like-animation {
+            animation: likeAnimation 0.6s ease;
         }
         
         /* Search Section */
@@ -574,8 +915,6 @@
             </a>
         </div>
 
-        <!-- Search Container -->
-
         <div class="video-feed" id="videoFeed"></div>
 
         <div class="loading-spinner">
@@ -583,7 +922,7 @@
         </div>
     </div>
 
-    <!-- Comment Section -->
+    <!-- Enhanced Comment Section -->
     <div class="comment-section" id="commentSection">
         <div class="comment-header">
             <h3>Comments</h3>
@@ -594,8 +933,18 @@
             <div class="no-comments">Loading comments...</div>
         </div>
         
+        <div class="replying-indicator-container" id="replyingIndicator">
+            <div class="replying-to">
+                Replying to <span id="replyingToUsername"></span>
+                <button class="close-reply" id="closeReplyBtn">&times;</button>
+            </div>
+        </div>
+        
         <div class="add-comment">
-            <input type="text" class="comment-input" id="commentInput" placeholder="Add a comment...">
+            <div class="comment-input-container">
+                <input type="text" class="comment-input" id="commentInput" placeholder="Add a comment...">
+                <button class="emoji-btn"><i class="far fa-smile"></i></button>
+            </div>
             <button class="post-comment-btn" id="postCommentBtn">Post</button>
         </div>
     </div>
@@ -607,6 +956,8 @@
         let hasMore = true;
         let currentPostId = null;
         let videoObservers = [];
+        let currentParentCommentId = null;
+        let replyingToUsername = null;
 
         // Get CSRF token from cookies
         function getCSRFToken() {
@@ -754,7 +1105,7 @@
                                 </a>
                                 <a href="/profile/${post.user.username}" class="username">@${post.user.username}</a>
                             </div>
-                            ${isCurrentUser ? '' : `
+                            ${isCurrentUser ? '' : ` 
                                 <button class="follow-btn ${post.user.is_following ? 'following' : ''}" 
                                         data-user-id="${post.user.id}">
                                     ${post.user.is_following ? '<i class="fas fa-check"></i> Following' : 'Follow'}
@@ -797,7 +1148,7 @@
             videoObservers.push(observer);
         }
 
-        // Load comments for a post with replies
+        // Load comments for a post with replies - UPDATED
         async function loadComments(postId) {
             try {
                 document.getElementById('commentsContainer').innerHTML = '<div class="no-comments">Loading comments...</div>';
@@ -809,72 +1160,161 @@
                 renderComments(comments);
             } catch (error) {
                 console.error('Error loading comments:', error);
-                document.getElementById('commentsContainer').innerHTML = '<div class="no-results">Failed to load comments</div>';
+                document.getElementById('commentsContainer').innerHTML = '<div class="no-comments">Failed to load comments</div>';
             }
         }
 
-        // Render comments with profile pictures and reply functionality
+        // Render comments with proper nesting - UPDATED
         function renderComments(comments) {
             const container = document.getElementById('commentsContainer');
             container.innerHTML = '';
-            
+
             if (comments.length === 0) {
                 container.innerHTML = '<div class="no-comments">No comments yet. Be the first to comment!</div>';
                 return;
             }
-            
+
+            // Create a map of comments by ID
+            const commentMap = {};
             comments.forEach(comment => {
-                const commentElement = document.createElement('div');
-                commentElement.className = 'comment';
-                
-                // Format timestamp
-                const commentDate = new Date(comment.created_at);
-                const formattedTime = commentDate.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
-                
-                const profilePic = comment.user.profile_picture ? 
-                    `<img src="${comment.user.profile_picture}" class="comment-user-pic" alt="@${comment.user.username}">` :
-                    `<div class="comment-user-pic default-profile-pic">${comment.user.username[0].toUpperCase()}</div>`;
-                
-                commentElement.innerHTML = `
-                    <a href="/profile/${comment.user.username}">
-                        ${profilePic}
-                    </a>
-                    <div class="comment-content">
-                        <a href="/profile/${comment.user.username}" class="comment-username">@${comment.user.username}</a>
-                        <div class="comment-text">${comment.text}</div>
-                        <div class="comment-actions">
-                            <span class="comment-time">${formattedTime}</span>
-                            <span class="comment-action like-comment"><i class="far fa-heart"></i> ${comment.likes || 0}</span>
-                            <span class="comment-action reply-btn" data-username="${comment.user.username}">Reply</span>
-                        </div>
-                    </div>
-                `;
-                
-                container.appendChild(commentElement);
-                
-                // Add event listener for reply button
-                const replyBtn = commentElement.querySelector('.reply-btn');
-                replyBtn.addEventListener('click', function() {
-                    const username = this.getAttribute('data-username');
-                    document.getElementById('commentInput').value = `@${username} `;
-                    document.getElementById('commentInput').focus();
-                });
+                comment.replies = [];
+                commentMap[comment.id] = comment;
             });
-            
-            // Scroll to bottom of comments
-            container.scrollTop = container.scrollHeight;
+
+            // Build comment hierarchy
+            const topLevelComments = [];
+            comments.forEach(comment => {
+                if (comment.parent) {
+                    const parentId = typeof comment.parent === 'object' ? comment.parent.id : comment.parent;
+                    const parentComment = commentMap[parentId];
+                    if (parentComment) {
+                        parentComment.replies.push(comment);
+                    }
+                } else {
+                    topLevelComments.push(comment);
+                }
+            });
+
+            // Render comments in hierarchical order
+            topLevelComments.forEach(comment => {
+                renderComment(comment, container);
+            });
         }
 
-        // Post a new comment
-        async function postComment(postId, text) {
+        // Render a comment and its replies recursively - NEW FUNCTION
+        function renderComment(comment, container, isReply = false) {
+            const commentContainer = document.createElement('div');
+            commentContainer.className = 'comment-container';
+            
+            // Format timestamp
+            const commentDate = new Date(comment.created_at);
+            const formattedTime = commentDate.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+            
+            const profilePic = comment.user.profile_picture ? 
+                `<img src="${comment.user.profile_picture}" class="comment-user-pic" alt="@${comment.user.username}">` :
+                `<div class="comment-user-pic default-profile-pic">${comment.user.username[0].toUpperCase()}</div>`;
+            
+            const commentElement = document.createElement('div');
+            commentElement.className = `comment`;
+            commentElement.dataset.commentId = comment.id;
+            commentElement.innerHTML = `
+                <a href="/profile/${comment.user.username}">
+                    ${profilePic}
+                </a>
+                <div class="comment-content">
+                    <a href="/profile/${comment.user.username}" class="comment-username">@${comment.user.username}</a>
+                    <div class="comment-text">${comment.text}</div>
+                    <div class="comment-actions">
+                        <span class="comment-time">${formattedTime}</span>
+                        <span class="comment-action like-comment" data-comment-id="${comment.id}">
+                            <i class="far fa-heart"></i> ${comment.likes_count || 0}
+                        </span>
+                        <span class="comment-action reply-btn" data-comment-id="${comment.id}" data-username="${comment.user.username}">
+                            Reply
+                        </span>
+                    </div>
+                </div>
+            `;
+            
+            commentContainer.appendChild(commentElement);
+            
+            // Add event listeners
+            const replyBtn = commentElement.querySelector('.reply-btn');
+            replyBtn.addEventListener('click', function() {
+                const username = this.getAttribute('data-username');
+                const commentId = this.getAttribute('data-comment-id');
+                
+                // Set replying state
+                currentParentCommentId = commentId;
+                replyingToUsername = username;
+                
+                // Show replying indicator
+                document.getElementById('replyingToUsername').textContent = `@${username}`;
+                document.getElementById('replyingIndicator').style.display = 'block';
+                
+                // Focus comment input
+                document.getElementById('commentInput').focus();
+            });
+            
+            const likeBtn = commentElement.querySelector('.like-comment');
+            likeBtn.addEventListener('click', function() {
+                const commentId = this.getAttribute('data-comment-id');
+                likeComment(commentId, this);
+            });
+            
+            // Render replies recursively if they exist
+            if (comment.replies && comment.replies.length > 0) {
+                // Add view replies button
+                const viewRepliesBtn = document.createElement('button');
+                viewRepliesBtn.className = 'view-replies-btn';
+                viewRepliesBtn.dataset.commentId = comment.id;
+                viewRepliesBtn.innerHTML = `
+                    <i class="fas fa-chevron-down"></i> 
+                    View replies (${comment.replies.length})
+                `;
+                
+                // Create replies container
+                const repliesContainer = document.createElement('div');
+                repliesContainer.className = 'nested-comments replies-container expanded';
+                repliesContainer.dataset.commentId = comment.id;
+                
+                viewRepliesBtn.addEventListener('click', function() {
+                    
+                    const isExpanded = repliesContainer.classList.toggle('expanded');
+                    if (isExpanded) {
+                        this.innerHTML = `<i class="fas fa-chevron-up"></i> Hide replies`;
+                    } else {
+                        this.innerHTML = `<i class="fas fa-chevron-down"></i> View replies (${comment.replies.length})`;
+                    }
+                });
+                
+                commentElement.querySelector('.comment-content').appendChild(viewRepliesBtn);
+                commentContainer.appendChild(repliesContainer);
+                
+                // Render each reply
+                comment.replies.forEach(reply => {
+                    renderComment(reply, repliesContainer, true);
+                });
+            }
+            
+            container.appendChild(commentContainer);
+        }
+
+        // Post a new comment or reply - UPDATED
+        async function postComment(postId, text, parentId = null) {
             try {
+                const payload = {
+                    text: text,
+                    parent: parentId
+                };
+                
                 const response = await fetch(`/api/posts/${postId}/comments/`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRFToken': getCSRFToken()
                     },
-                    body: JSON.stringify({ text })
+                    body: JSON.stringify(payload)
                 });
                 
                 if (!response.ok) {
@@ -882,30 +1322,98 @@
                     throw new Error(errorData.error || 'Failed to post comment');
                 }
                 
-                // Reload comments
-                loadComments(postId);
+                const newComment = await response.json();
+                
+                // Reset replying state
+                currentParentCommentId = null;
+                replyingToUsername = null;
+                document.getElementById('replyingIndicator').style.display = 'none';
                 document.getElementById('commentInput').value = '';
+                
+                // Add new comment to UI
+                const container = document.getElementById('commentsContainer');
+                
+                if (parentId) {
+                    // This is a reply - find the parent comment
+                    const parentComment = container.querySelector(`.comment[data-comment-id="${parentId}"]`);
+                    if (parentComment) {
+                        // Find the replies container
+                        let repliesContainer = parentComment.closest('.comment-container').querySelector('.replies-container');
+                        
+                        // Create container if it doesn't exist
+                        if (!repliesContainer) {
+                            // Create view replies button
+                            const viewRepliesBtn = document.createElement('button');
+                            viewRepliesBtn.className = 'view-replies-btn';
+                            viewRepliesBtn.dataset.commentId = parentId;
+                            viewRepliesBtn.innerHTML = `
+                                <i class="fas fa-chevron-down"></i> 
+                                View replies (1)
+                            `;
+                            
+                            // Create replies container
+                            repliesContainer = document.createElement('div');
+                            repliesContainer.className = 'nested-comments replies-container expanded';
+                            repliesContainer.dataset.commentId = parentId;
+                            
+                            // Add after the comment
+                            const commentContainer = parentComment.closest('.comment-container');
+                            commentContainer.appendChild(viewRepliesBtn);
+                            commentContainer.appendChild(repliesContainer);
+                            
+                            viewRepliesBtn.addEventListener('click', function() {
+                                const commentId = this.getAttribute('data-comment-id');
+                                const repliesContainer = this.nextElementSibling;
+                                
+                                if (repliesContainer.classList.contains('expanded')) {
+                                    repliesContainer.classList.remove('expanded');
+                                    this.innerHTML = `<i class="fas fa-chevron-down"></i> View replies (1)`;
+                                } else {
+                                    repliesContainer.classList.add('expanded');
+                                    this.innerHTML = `<i class="fas fa-chevron-up"></i> Hide replies`;
+                                }
+                            });
+                        }
+                        
+                        // Render the new reply
+                        newComment.replies = [];
+                        renderComment(newComment, repliesContainer, true);
+                        
+                        // Update view replies button
+                        const viewRepliesBtn = parentComment.closest('.comment-container').querySelector('.view-replies-btn');
+                        if (viewRepliesBtn) {
+                            const countText = viewRepliesBtn.textContent.trim();
+                            const currentCount = parseInt(countText.match(/\d+/)[0]);
+                            viewRepliesBtn.innerHTML = `<i class="fas fa-chevron-down"></i> View replies (${currentCount + 1})`;
+                        }
+                    }
+                } else {
+                    // This is a top-level comment
+                    newComment.replies = [];
+                    renderComment(newComment, container);
+                }
                 
                 // Update comment count in feed
                 const commentButton = document.querySelector(`.comment-button[data-post-id="${postId}"]`);
                 if (commentButton) {
                     const countSpan = commentButton.querySelector('.action-count');
-                    countSpan.textContent = (parseInt(countSpan.textContent.replace(/,/g, '')) + 1).toLocaleString();
+                    const currentCount = parseInt(countSpan.textContent.replace(/,/g, ''));
+                    countSpan.textContent = (currentCount + 1).toLocaleString();
                 }
                 
                 showNotification('Comment posted successfully!');
+                
+                // Scroll to the new comment
+                setTimeout(() => {
+                    container.scrollTop = container.scrollHeight;
+                }, 100);
             } catch (error) {
                 console.error('Error posting comment:', error);
                 showNotification(`Error: ${error.message}`);
             }
         }
 
-        // Search function
         
-
-        // Render search results
-       
-
         // Download media file
         async function downloadMedia(mediaUrl, filename) {
             try {
@@ -935,13 +1443,19 @@
             
             // Comment section event listeners
             document.getElementById('closeComments').addEventListener('click', () => {
-                document.getElementById('commentSection').style.display = 'none';
+                document.getElementById('commentSection').classList.remove('active');
+            });
+            
+            document.getElementById('closeReplyBtn').addEventListener('click', () => {
+                currentParentCommentId = null;
+                replyingToUsername = null;
+                document.getElementById('replyingIndicator').style.display = 'none';
             });
             
             document.getElementById('postCommentBtn').addEventListener('click', () => {
                 const text = document.getElementById('commentInput').value.trim();
                 if (text && currentPostId) {
-                    postComment(currentPostId, text);
+                    postComment(currentPostId, text, currentParentCommentId);
                 } else if (!text) {
                     showNotification('Please enter a comment');
                 }
@@ -952,39 +1466,7 @@
                 if (e.key === 'Enter') {
                     const text = e.target.value.trim();
                     if (text && currentPostId) {
-                        postComment(currentPostId, text);
-                    }
-                }
-            });
-
-            // Search functionality
-            document.getElementById('searchToggle').addEventListener('click', (e) => {
-                e.preventDefault();
-                document.getElementById('searchContainer').style.display = 'block';
-                document.getElementById('searchInput').focus();
-            });
-
-            document.getElementById('closeSearch').addEventListener('click', () => {
-                document.getElementById('searchContainer').style.display = 'none';
-            });
-
-            document.getElementById('performSearch').addEventListener('click', () => {
-                const query = document.getElementById('searchInput').value.trim();
-                if (query) {
-                    performSearch(query);
-                } else {
-                    document.getElementById('searchResults').innerHTML = '<div class="no-results">Please enter a search term</div>';
-                }
-            });
-
-            // Allow Enter key to search
-            document.getElementById('searchInput').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    const query = e.target.value.trim();
-                    if (query) {
-                        performSearch(query);
-                    } else {
-                        document.getElementById('searchResults').innerHTML = '<div class="no-results">Please enter a search term</div>';
+                        postComment(currentPostId, text, currentParentCommentId);
                     }
                 }
             });
@@ -1000,8 +1482,6 @@
         // Tab switching
         document.querySelectorAll('.tab-button').forEach(tab => {
             tab.addEventListener('click', function(e) {
-                if (this.id === 'searchToggle') return;
-                
                 e.preventDefault();
                 activeTab = this.dataset.tab;
                 currentPage = 1;
@@ -1064,7 +1544,12 @@
                 currentPostId = button.dataset.postId;
                 
                 // Show comment section
-                document.getElementById('commentSection').style.display = 'block';
+                document.getElementById('commentSection').classList.add('active');
+                
+                // Reset replying state
+                currentParentCommentId = null;
+                replyingToUsername = null;
+                document.getElementById('replyingIndicator').style.display = 'none';
                 
                 // Load comments
                 loadComments(currentPostId);

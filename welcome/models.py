@@ -116,6 +116,15 @@ class Post(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     views = models.PositiveIntegerField(default=0)
     score = models.FloatField(default=0)  # For algorithmic ranking
+    like = models.ManyToManyField(User, related_name='post_likes', blank=True)
+
+    @property
+    def likes_count(self):
+        return self.like.count()
+    
+    @property
+    def comment_count(self):
+        return self.comment.filter(parent__isnull=True).count()
 
     def __str__(self):
         return f"{self.user.username} - {self.content_type}"
@@ -138,10 +147,19 @@ class Comment(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='comments')
     text = models.TextField(max_length=500)
+    parent = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE, related_name='replies')
     created_at = models.DateTimeField(auto_now_add=True)
+    likes = models.ManyToManyField(User, blank=True, related_name='comment_likes')
+
+    class Meta:
+        ordering = ['created_at']
 
     def __str__(self):
         return f"{self.user.username}: {self.text[:20]}"
+
+    @property
+    def likes_count(self):
+        return self.likes.count()
 
 class Hashtag(models.Model):
     name = models.CharField(max_length=50, unique=True)

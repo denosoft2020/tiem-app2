@@ -8,9 +8,16 @@ from django.urls import reverse
 User = get_user_model()
 
 class UserSerializer(serializers.ModelSerializer):
+    profile_picture = serializers.SerializerMethodField()
+    
     class Meta:
         model = User
-        fields = ['id', 'username', 'first_name', 'last_name', 'email', 'is_active', 'is_staff', 'date_joined', 'last_login', 'profile']
+        fields = ['id', 'username', 'first_name', 'last_name', 'email', 'is_active', 'is_staff', 'date_joined', 'last_login', 'profile', 'profile_picture']
+
+    def get_profile_picture(self, obj):
+        if obj.profile.profile_picture:
+            return obj.profile.profile_picture.url
+        return None
 
 class NotificationSerializer(serializers.ModelSerializer):
     post_id = serializers.SerializerMethodField()
@@ -158,13 +165,14 @@ class PostSerializer(serializers.ModelSerializer):
     comments_count = serializers.SerializerMethodField()
     is_liked = serializers.SerializerMethodField()
     media_file = serializers.SerializerMethodField()
-    #media_file = serializers.SerializerMethodField()
+    is_following = serializers.SerializerMethodField()
+    
 
     class Meta:
         model = Post
         fields = ['id', 'user', 'content_type', 'media_file', 'caption', 
                   'hashtags', 'mentions', 'location', 'created_at', 
-                  'views', 'likes_count', 'comments_count', 'is_liked']
+                  'views', 'likes_count', 'comments_count', 'is_liked', 'is_following']
         #read_only_fields = ['user', 'views', 'created_at', 'score']
 
     def get_likes_count(self, obj):
@@ -184,16 +192,43 @@ class PostSerializer(serializers.ModelSerializer):
         if obj.media_file:
             return request.build_absolute_uri(obj.media_file.url)
         return None
+    
+    def get_is_following(self, obj):
+        user = self.context['request'].user
+        if user.is_authenticated:
+            return user.profile.follows.filter(id=obj.user.id).exists()
+        return False
 
 class LikeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Like
         fields = '__all__'
 
-class CommentSerializer(serializers.ModelSerializer):
-    user = UserProfileSerializer(read_only=True)
+class ReplySerializer(serializers.ModelSerializer):
+    user = serializers.StringRelatedField()
 
     class Meta:
         model = Comment
-        fields =  ['id', 'text', 'created_at', 'user']
-        read_only_fields = ['user', 'created_at', 'user']
+        fields = ['id', 'user', 'text', 'created_at']
+
+class CommentSerializer(serializers.ModelSerializer):
+    user = UserProfileSerializer(read_only=True)
+    parent = serializers.PrimaryKeyRelatedField(read_only=True)
+    replies = ReplySerializer(many=True, read_only=True)
+    likes_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Comment
+        fields =  ['id', 'text', 'created_at', 'user', 'parent', 'replies', 'post', 'likes_count']
+        read_only_fields = ['user', 'post']
+        
+    def get_replies(self, obj):
+        # Recursively serialize replies
+        replies = obj.replies.all()
+        return CommentSerializer(replies, many=True).data
+    
+    def get_likes_count(self, obj):
+        return obj.likes.count()
+    
+
+

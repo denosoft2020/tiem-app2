@@ -8,7 +8,8 @@ from django.contrib.auth.forms import UserCreationForm
 from django.http import JsonResponse, HttpResponse
 import json
 from django.contrib.auth.decorators import login_required
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_http_methods
+from django.utils.decorators import method_decorator
 from .models import Profile, Post, Notification, Message, LiveStream, UserInteraction, Hashtag, Like, Comment, User, ConversationRequest, Conversation
 from .forms import ProfileUpdateForm, ProfilePictureForm, EmailChangeForm, CustomPasswordChangeForm, PrivacySettingsForm, SupportForm
 from django.views.decorators.csrf import csrf_exempt
@@ -433,6 +434,34 @@ def custom_logout(request):
     logout(request)
     return redirect('/')
 
+class CommentListCreateAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def get(self, request, post_id):
+        comments = Comment.objects.filter(post_id=post_id, parent__isnull=True).order_by('-created_at')
+        serializer = CommentSerializer(comments, many=True)
+        return Response(serializer.data)
+
+    def post(self, request, post_id):
+        post = Post.objects.get(id=post_id)
+        data = request.data.copy()
+        data['post'] = post.id
+        data['user'] = request.user.id
+
+        serializer = CommentSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(user=request.user, post=post)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+class CommentReplyListAPIView(generics.ListAPIView):
+    serializer_class = CommentSerializer
+    permission_classes = [permissions.AllowAny]
+
+    def get_queryset(self):
+        comment_id = self.kwargs.get('comment_id')
+        return Comment.objects.filter(parent_id=comment_id).order_by('created_at')
+
 class CommentViewSet(viewsets.ModelViewSet):
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
@@ -447,6 +476,121 @@ class CommentViewSet(viewsets.ModelViewSet):
             post=comment.post,
             interaction_type='comment'
         )
+
+# nested comments and feed view
+
+class PostCommentsAPIView(APIView):
+    def get(self, request, post_id):
+        try:
+            post = Post.objects.get(id=post_id)
+            # Get top-level comments and prefetch replies
+            comments = Comment.objects.filter(
+                post=post, 
+                parent__isnull=True
+            ).prefetch_related(
+                'replies',
+                'replies__user',
+                'replies__user__profile'
+            )
+            
+            serializer = CommentSerializer(comments, many=True)
+            return Response(serializer.data)
+        except Post.DoesNotExist:
+            return Response(
+                {"error": "Post not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+class CreateCommentAPIView(APIView):
+    serializer_class = CommentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        post_id = self.kwargs['post_id']
+        serializer.save(user=self.request.user, post_id=post_id)
+
+    def post(self, request, post_id):
+        try:
+            post = Post.objects.get(id=post_id)
+            text = request.data.get('text')
+            parent_id = request.data.get('parent_id')
+            
+            parent = None
+            if parent_id:
+                try:
+                    parent = Comment.objects.get(id=parent_id)
+                except Comment.DoesNotExist:
+                    pass
+            
+            comment = Comment.objects.create(
+                post=post,
+                user=request.user,
+                text=text,
+                parent=parent
+            )
+            
+            # Update comment count
+            post.comments_count = Comment.objects.filter(post=post).count()
+            post.save()
+            
+            serializer = CommentSerializer(comment)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        except Post.DoesNotExist:
+            return Response(
+                {"error": "Post not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+class LikeCommentAPIView(APIView):
+    def post(self, request, comment_id):
+        try:
+            comment = Comment.objects.get(id=comment_id)
+            user = request.user
+            
+            if user in comment.likes.all():
+                comment.likes.remove(user)
+                liked = False
+            else:
+                comment.likes.add(user)
+                liked = True
+            
+            return Response({
+                "liked": liked,
+                "likes_count": comment.likes.count()
+            })
+        except Comment.DoesNotExist:
+            return Response(
+                {"error": "Comment not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+class LikePostAPIView(APIView):
+    def post(self, request, post_id):
+        try:
+            post = Post.objects.get(id=post_id)
+            user = request.user
+            
+            if user in post.likes.all():
+                post.likes.remove(user)
+                post.likes_count = post.likes.count()
+                liked = False
+            else:
+                post.likes.add(user)
+                post.likes_count = post.likes.count()
+                liked = True
+            
+            post.save()
+            return Response({
+                "liked": liked,
+                "likes_count": post.likes_count
+            })
+        except Post.DoesNotExist:
+            return Response(
+                {"error": "Post not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+#end of test nested comments and feed view
 
 def upload_page(request):
     """Renders the camera UI page"""
@@ -1351,38 +1495,62 @@ def like_post(request, post_id):
 @login_required
 def post_comments(request, post_id):
     post = get_object_or_404(Post, id=post_id)
-    
+
+    def serialize_user(user):
+        profile = getattr(user, 'profile', None)
+        return {
+            "username": user.username,
+            "profile_picture": profile.profile_picture.url if profile and profile.profile_picture else None
+        }
+
     if request.method == 'GET':
-        comments = Comment.objects.filter(post=post).select_related('user')
-        serializer = CommentSerializer(comments, many=True)
-        return Response(serializer.data)
-    
+        all_comments = Comment.objects.filter(post=post).select_related('user', 'parent').order_by('created_at')
+
+        data = []
+        for comment in all_comments:
+            data.append({
+                "id": comment.id,
+                "text": comment.text,
+                "created_at": comment.created_at,
+                "user": serialize_user(comment.user),
+                "parent": comment.parent.id if comment.parent else None
+            })
+
+        return Response(data)
+
     elif request.method == 'POST':
-        # Extract text from request data
         text = request.data.get('text')
+        parent_id = request.data.get('parent')
+
         if not text or text.strip() == '':
             return Response({"error": "Comment text is required"}, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Create the comment
+
+        parent = get_object_or_404(Comment, id=parent_id) if parent_id else None
+
         comment = Comment.objects.create(
             text=text.strip(),
             user=request.user,
-            post=post
+            post=post,
+            parent=parent
         )
-        
-        # Record interaction
+
         UserInteraction.objects.create(
             user=request.user,
             post=post,
             interaction_type='comment'
         )
-        
-        # Update comment count on post
+
         post.comments_count = Comment.objects.filter(post=post).count()
         post.save()
-        
-        serializer = CommentSerializer(comment)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        return Response({
+            "id": comment.id,
+            "text": comment.text,
+            "created_at": comment.created_at,
+            "user": serialize_user(comment.user),
+            "parent": comment.parent.id if comment.parent else None
+        }, status=status.HTTP_201_CREATED)
+
 
 @require_POST
 @login_required

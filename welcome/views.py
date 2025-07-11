@@ -36,7 +36,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework import serializers
 from .serializers import NotificationSerializer, MessageSerializer, ConversationRequestSerializer, ConversationSerializer
 from django.contrib.auth import get_user_model
-from django.db.models import Q, Count, Subquery, OuterRef, Max
+from django.db.models import Q, Count, Subquery, OuterRef, Max, Prefetch
 from agora_token_builder import RtcTokenBuilder
 from .serializers import (
     PostSerializer, 
@@ -332,11 +332,13 @@ class PostViewSet(viewsets.ModelViewSet):
         )
         return Response(status=status.HTTP_201_CREATED)
 
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['post'], permission_classes=[permissions.AllowAny])
     def increment_views(self, request, pk=None):
         post = self.get_object()
         post.views += 1
         post.save()
+        return Response({"views": post.views}, status=200)
+
         
         # Record interaction
         UserInteraction.objects.create(
@@ -669,6 +671,19 @@ def get_hashtags(request):
     query = request.GET.get('q', '')
     # Return filtered hashtags from your database
     return JsonResponse([], safe=False)
+
+@login_required
+def hashtag_view(request, tag):
+    tag = tag.lower()
+    posts = Post.objects.filter(
+        hashtags__name=tag
+    ).select_related('user__profile').order_by('-created_at')
+
+    return render(request, 'hashtag.html', {
+        'tag': tag,
+        'posts': posts,
+    })
+
 
 @cache_page(60 * 15)
 def search_users(request):
@@ -1513,7 +1528,9 @@ def post_comments(request, post_id):
                 "text": comment.text,
                 "created_at": comment.created_at,
                 "user": serialize_user(comment.user),
-                "parent": comment.parent.id if comment.parent else None
+                "parent": comment.parent.id if comment.parent else None,
+                "likes_count": comment.likes.count(),
+                "is_liked": request.user.is_authenticated and comment.likes.filter(id=request.user.id).exists()
             })
 
         return Response(data)

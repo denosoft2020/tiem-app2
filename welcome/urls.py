@@ -59,6 +59,7 @@ urlpatterns = [
     path('api/posts/<int:post_id>/like/', LikePostAPIView.as_view(), name='like-post'),
     path('api/users/', views.get_users, name='get_users'),
     path('api/hashtags/', views.get_hashtags),
+    path('hashtag/<str:tag>/', views.hashtag_view, name='hashtag'),
     path('api/users/search/', views.search_users),
     path('friends/', views.friends, name='friends'),
     path('api/comprehensive_search/', views.comprehensive_search, name='comprehensive_search'),

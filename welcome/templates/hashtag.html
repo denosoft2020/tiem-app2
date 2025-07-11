@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="feed-container">
+    <h2>#{{ tag }}</h2>
+    
+    {% for post in posts %}
+        <div class="video-container">
+            {% if post.content_type == 'video' %}
+                <video controls width="100%">
+                    <source src="{{ post.media_file.url }}" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            {% elif post.content_type == 'image' %}
+                <img src="{{ post.media_file.url }}" width="100%" />
+            {% endif %}
+            <div class="video-info">
+                <p><a href="{% url 'profile' post.user.username %}">@{{ post.user.username }}</a></p>
+                <p>{{ post.caption|linebreaks }}</p>
+                <p>{{ post.created_at|timesince }} ago</p>
+            </div>
+        </div>
+    {% empty %}
+        <p>No posts with this hashtag yet.</p>
+    {% endfor %}
+</div>
+{% endblock %}

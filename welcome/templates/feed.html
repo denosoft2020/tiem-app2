@@ -980,6 +980,14 @@
         function parseCaption(caption) {
             if (!caption) return '';
             
+             // Basic XSS protection
+            let safeCaption = caption
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+
             // Replace hashtags
             let parsed = caption.replace(/#(\w+)/g, '<a href="/hashtag/$1" class="hashtag">#$1</a>');
             
@@ -1123,30 +1131,97 @@
                 feed.appendChild(postElement);
                 
                 // Set up autoplay for video
-                if (post.media_file && post.content_type === 'video') {
-                    setupVideoAutoplay(postElement);
+                if (post.media_file) {
+                    if (post.content_type === 'video') {
+                        setupVideoAutoplay(postElement, post.id);
+                    } else if (post.content_type === 'image') {
+                        setupImageViewTrigger(postElement, post.id);
+                    }
                 }
             });
         }
 
         // Set up video autoplay
-        function setupVideoAutoplay(postElement) {
+        function setupVideoAutoplay(postElement, postId) {
             const video = postElement.querySelector('video');
             if (!video) return;
-            
+
+            const viewedKey = `viewed_post_${postId}`;
+
             const observer = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
                     if (entry.isIntersecting) {
                         video.play().catch(e => console.log("Autoplay prevented:", e));
+
+                        // Check sessionStorage instead of dataset
+                        if (!sessionStorage.getItem(viewedKey)) {
+                            fetch(`/api/posts/${postId}/increment_views/`, {
+                                method: 'POST',
+                                headers: {
+                                    'X-CSRFToken': getCSRFToken(),
+                                    'Content-Type': 'application/json'
+                                },
+                                credentials: 'include'
+                            }).then(() => {
+                                sessionStorage.setItem(viewedKey, 'true');
+                                const viewCountEl = postElement.querySelector('.view-count');
+                                if (viewCountEl) {
+                                    let currentText = viewCountEl.textContent.trim();
+                                    let match = currentText.match(/(\d+)/);
+                                    if (match) {
+                                        let count = parseInt(match[1].replace(/,/g, '')) + 1;
+                                        viewCountEl.innerHTML = `<i class="fas fa-eye"></i> ${count.toLocaleString()} views`;
+                                    }
+                                }
+
+                            });
+                        }
                     } else {
                         video.pause();
                     }
                 });
             }, { threshold: 0.5 });
-            
+
             observer.observe(postElement);
             videoObservers.push(observer);
         }
+
+        // Set up image view trigger
+        function setupImageViewTrigger(postElement, postId) {
+            const viewedKey = `viewed_post_${postId}`;
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        if (!sessionStorage.getItem(viewedKey)) {
+                            fetch(`/api/posts/${postId}/increment_views/`, {
+                                method: 'POST',
+                                headers: {
+                                    'X-CSRFToken': getCSRFToken(),
+                                    'Content-Type': 'application/json'
+                                },
+                                credentials: 'include'
+                            }).then(() => {
+                                sessionStorage.setItem(viewedKey, 'true');
+                                const viewCountEl = postElement.querySelector('.view-count');
+                                if (viewCountEl) {
+                                    let currentText = viewCountEl.textContent.trim();
+                                    let match = currentText.match(/(\d+)/);
+                                    if (match) {
+                                        let count = parseInt(match[1].replace(/,/g, '')) + 1;
+                                        viewCountEl.innerHTML = `<i class="fas fa-eye"></i> ${count.toLocaleString()} views`;
+                                    }
+                                }
+                            });
+                        }
+                    }
+                });
+            }, { threshold: 0.5 });
+
+            observer.observe(postElement);
+            videoObservers.push(observer);
+        }
+
 
         // Load comments for a post with replies - UPDATED
         async function loadComments(postId) {
@@ -1226,8 +1301,8 @@
                     <div class="comment-text">${comment.text}</div>
                     <div class="comment-actions">
                         <span class="comment-time">${formattedTime}</span>
-                        <span class="comment-action like-comment" data-comment-id="${comment.id}">
-                            <i class="far fa-heart"></i> ${comment.likes_count || 0}
+                        <span class="comment-action like-comment ${comment.is_liked ? 'liked' : ''}" data-comment-id="${comment.id}">
+                            <i class="${comment.is_liked ? 'fas' : 'far'} fa-heart"></i> ${comment.likes_count || 0}
                         </span>
                         <span class="comment-action reply-btn" data-comment-id="${comment.id}" data-username="${comment.user.username}">
                             Reply
@@ -1410,6 +1485,36 @@
             } catch (error) {
                 console.error('Error posting comment:', error);
                 showNotification(`Error: ${error.message}`);
+            }
+        }
+
+        // Like a comment
+        async function likeComment(commentId, buttonElement) {
+            try {
+                const response = await fetch(`/api/comments/${commentId}/like/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken()
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const icon = buttonElement.querySelector('i');
+                    
+                    // Toggle like state
+                    buttonElement.classList.toggle('liked', data.liked);
+                    icon.classList.toggle('fas', data.liked);
+                    icon.classList.toggle('far', !data.liked);
+
+                    // Update count
+                    buttonElement.innerHTML = `<i class="${data.liked ? 'fas' : 'far'} fa-heart"></i> ${data.likes_count}`;
+                } else {
+                    console.error('Failed to like comment');
+                }
+            } catch (error) {
+                console.error('Error liking comment:', error);
             }
         }
 

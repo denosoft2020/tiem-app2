@@ -299,10 +299,8 @@ class PostViewSet(viewsets.ModelViewSet):
         hashtags = re.findall(r"#(\w+)", post.caption)
         for tag in hashtags:
             hashtag, created = Hashtag.objects.get_or_create(name=tag.lower())
-            hashtag.count += 1
-            hashtag.save()
             post.hashtags.add(hashtag)
-        
+                
         # Process mentions
         mentions = re.findall(r"@(\w+)", post.caption)
         for username in mentions:
@@ -609,8 +607,8 @@ def upload_media(request):
         uploaded_file = request.FILES['file']
         file_type = request.POST.get('file_type', 'image')
         caption = request.POST.get('caption', '')
-        hashtags = request.POST.get('hashtags', '')
-        mentions = request.POST.get('mentions', '')
+        hashtags_input = request.POST.get('hashtags', '')
+        mentions_input = request.POST.get('mentions', '')
         location = request.POST.get('location', '')
 
         # Determine content type based on file MIME type
@@ -630,22 +628,18 @@ def upload_media(request):
             location=location
         )
          # Process hashtags
-        for tag in hashtags.split():
-            if tag.startswith('#'):
-                tag = tag[1:]
-            if tag:
-                hashtag, created = Hashtag.objects.get_or_create(name=tag.lower())
-                post.hashtags.add(hashtag)
+        all_hashtags = set(re.findall(r"#(\w+)", caption) + re.findall(r"#(\w+)", hashtags_input))
+        for tag in all_hashtags:
+            hashtag, created = Hashtag.objects.get_or_create(name=tag.lower())
+            post.hashtags.add(hashtag)
 
         # Process mentions
-        for username in mentions.split():
-            if username.startswith('@'):
-                username = username[1:]
-            if username:
-                try:
-                    user = User.objects.get(username=username)
-                    post.mentions.add(user)
-                except User.DoesNotExist:
+        all_mentions = set(re.findall(r"@(\w+)", caption) + re.findall(r"@(\w+)", mentions_input))
+        for username in all_mentions:
+            try:
+                user = User.objects.get(username=username)
+                post.mentions.add(user)
+            except User.DoesNotExist:
                     pass
 
 

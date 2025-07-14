@@ -1051,6 +1051,7 @@
         // Render posts dynamically with improved layout
         function renderPosts(posts) {
             const feed = document.getElementById('videoFeed');
+
             
             posts.forEach(post => {
                 const isCurrentUser = post.user.id.toString() === CURRENT_USER_ID;
@@ -1067,9 +1068,29 @@
                 
                 // Parse caption for hashtags and mentions
                 const parsedCaption = parseCaption(post.caption);
-                
+
+                // ✅ Safe rendering of hashtags and mentions
+                let hashtagsHTML = '';
+                if (Array.isArray(post.hashtags)) {
+                    hashtagsHTML = post.hashtags.map(tag =>
+                        `<a href="/hashtag/${tag}" class="hashtag">#${tag}</a>`
+                    ).join(' ');
+                }
+
+                let mentionsHTML = '';
+                if (Array.isArray(post.mentions)) {
+                    mentionsHTML = post.mentions.map(user =>
+                        `<a href="/profile/${user}" class="mention">@${user}</a>`
+                    ).join(' ');
+                }
+
+                const fullCaption = `
+                    <p class="video-caption"> ${hashtagsHTML} ${mentionsHTML}</p>
+                `;
+
                 const postElement = document.createElement('div');
                 postElement.className = 'video-container';
+                
                 postElement.innerHTML = `
                     <div class="video-wrapper">
                         ${post.media_file ? 
@@ -1121,6 +1142,7 @@
                             `}
                         </div>
                         <p class="video-caption">${parsedCaption || ''}</p>
+                        ${fullCaption}
                         ${post.location ? `<a href="#" class="location"><i class="fas fa-map-marker-alt"></i> ${post.location}</a>` : ''}
                         <div class="video-meta">
                             <span class="post-time">${formattedDate}</span>

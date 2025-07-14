@@ -166,7 +166,13 @@ class PostSerializer(serializers.ModelSerializer):
     is_liked = serializers.SerializerMethodField()
     media_file = serializers.SerializerMethodField()
     is_following = serializers.SerializerMethodField()
-    
+    hashtags = serializers.SlugRelatedField(
+        many=True, read_only=True, slug_field='name'
+    )
+    mentions = serializers.SlugRelatedField(
+        many=True, read_only=True, slug_field='username'
+    )
+
 
     class Meta:
         model = Post

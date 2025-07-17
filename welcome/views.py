@@ -36,7 +36,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework import serializers
 from .serializers import NotificationSerializer, MessageSerializer, ConversationRequestSerializer, ConversationSerializer
 from django.contrib.auth import get_user_model
-from django.db.models import Q, Count, Subquery, OuterRef, Max, Prefetch
+from django.db.models import Q, Count, Subquery, OuterRef, Max, Prefetch, Exists
 from agora_token_builder import RtcTokenBuilder
 from .serializers import (
     PostSerializer, 
@@ -50,9 +50,6 @@ import re
 import logging
 logger = logging.getLogger(__name__)
 #from agora_token_builder.RtcTokenBuilder import Role
-
-
-
 
 
 # Create your views here.
@@ -236,6 +233,28 @@ def follow_user(request, username):
     
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def follow_toggle(request, username):
+    try:
+        target_user = User.objects.get(username=username)
+        target_profile = target_user.profile
+    except User.DoesNotExist:
+        return Response({'error': 'User not found'}, status=404)
+
+    user_profile = request.user.profile
+
+    if user_profile == target_profile:
+        return Response({'error': 'You cannot follow yourself'}, status=400)
+
+    if target_profile in user_profile.follows.all():
+        user_profile.follows.remove(target_profile)
+        status_result = 'unfollowed'
+    else:
+        user_profile.follows.add(target_profile)
+        status_result = 'followed'
+
+    return Response({'status': status_result})
 @login_required
 def change_profile_picture(request):
     if request.method == 'POST':

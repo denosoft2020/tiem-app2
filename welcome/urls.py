@@ -4,7 +4,7 @@ from django.contrib.auth.views import LoginView
 from django.conf import settings
 from django.conf.urls.static import static
 from rest_framework.routers import DefaultRouter
-from .views import NotificationListView, NotificationDetailView, MarkNotificationAsRead, MarkAllNotificationsRead, ConversationListView, PostViewSet, FeedViewSet, ProfileViewSet, CommentViewSet, api_follow_user, ConversationRequestView, ConversationRequestActionView, accept_message_request, reject_message_request, MarkAllNotificationsRead, ConversationRequestListView, AcceptedConversationListView, send_message, get_conversation_requests, custom_logout, delete_post, CommentListCreateAPIView, CommentReplyListAPIView, PostCommentsAPIView, CreateCommentAPIView, LikeCommentAPIView, LikePostAPIView
+from .views import NotificationListView, NotificationDetailView, MarkNotificationAsRead, MarkAllNotificationsRead, ConversationListView, PostViewSet, FeedViewSet, ProfileViewSet, CommentViewSet, api_follow_user, ConversationRequestView, ConversationRequestActionView, accept_message_request, reject_message_request, MarkAllNotificationsRead, ConversationRequestListView, AcceptedConversationListView, send_message, get_conversation_requests, custom_logout, delete_post, CommentListCreateAPIView, CommentReplyListAPIView, PostCommentsAPIView, CreateCommentAPIView, LikeCommentAPIView, LikePostAPIView, follow_toggle
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 
@@ -43,17 +43,15 @@ urlpatterns = [
     path('profile/<str:username>/followers/', views.followers_list, name='followers'),
     path('profile/<str:username>/following/', views.following_list, name='following'),
     path('api/follow/<int:user_id>/', api_follow_user, name='api-follow'),
+    path('api/follow/<str:username>/', follow_toggle, name='follow_toggle'),
     path('edit-profile/', views.edit_profile, name='edit-profile'),
     path('post/<int:post_id>/save/', views.save_post, name='save-post'),
     path('upload/', views.upload_page, name="upload_page"),
     path('api/upload/', views.upload_media, name='upload_media'),
     path('api/posts/<int:post_id>/like', views.like_post, name='like_post'),
     path('api/posts/<int:post_id>/comments/', views.post_comments, name='post-comments'),
-    #path('api/posts/<int:post_id>/comments/', CommentListCreateAPIView.as_view(), name='comments'),
     path('api/comments/<int:comment_id>/replies/', CommentReplyListAPIView.as_view(), name='comment-replies'),
     #nested comments and feed view
-    #path('api/posts/<int:post_id>/comments/', PostCommentsAPIView.as_view(), name='post-comments'),
-    #path('api/posts/<int:post_id>/comments/', CommentListCreateAPIView.as_view()),
     path('api/posts/<int:post_id>/comments/create/', CreateCommentAPIView.as_view(), name='create-comment'),
     path('api/comments/<int:comment_id>/like/', LikeCommentAPIView.as_view(), name='like-comment'),
     path('api/posts/<int:post_id>/like/', LikePostAPIView.as_view(), name='like-post'),

@@ -1135,9 +1135,8 @@
                                 <a href="/profile/${post.user.username}" class="username">@${post.user.username}</a>
                             </div>
                             ${isCurrentUser ? '' : ` 
-                                <button class="follow-btn ${post.user.is_following ? 'following' : ''}" 
-                                        data-user-id="${post.user.id}">
-                                    ${post.user.is_following ? '<i class="fas fa-check"></i> Following' : 'Follow'}
+                                <button class="follow-btn ${post.is_following ? 'following' : ''}" data-username="${post.user.username}">
+                                    ${post.is_following ? 'Following' : 'Follow'}
                                 </button>
                             `}
                         </div>
@@ -1688,38 +1687,40 @@
             }
 
             // Follow functionality
-            if (e.target.closest('.follow-btn')) {
-                const button = e.target.closest('.follow-btn');
-                const userId = button.dataset.userId;
+            if (e.target.classList.contains('follow-btn')) {
+                const button = e.target;
                 const isFollowing = button.classList.contains('following');
+                const username = button.dataset.username;
 
-                try {
-                    const response = await fetch(`/api/follow/${userId}/`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': getCSRFToken()
-                        },
-                        body: JSON.stringify({
-                            action: isFollowing ? 'unfollow' : 'follow'
-                        })
-                    });
+                const followBtnHTML = `
+                    <button class="follow-btn ${isFollowing ? 'following' : ''}" data-username="${username}">
+                        ${isFollowing ? 'Following' : 'Follow'}
+                    </button>
+                `;
 
-                    if (response.ok) {
-                        const result = await response.json();
-                        
-                        // Update UI
-                        button.classList.toggle('following');
-                        button.innerHTML = result.is_following ? 
-                            '<i class="fas fa-check"></i> Following' : 
-                            'Follow';
-                        
-                        showNotification(result.is_following ? 'Followed user' : 'Unfollowed user');
+                fetch(`/api/follow/${username}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCSRFToken(),
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include'
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'followed') {
+                        button.textContent = 'Following';
+                        button.classList.add('following');
+                    } else if (data.status === 'unfollowed') {
+                        button.textContent = 'Follow';
+                        button.classList.remove('following');
                     }
-                } catch (error) {
-                    console.error('Error following user:', error);
-                    showNotification('Error updating follow status');
-                }
+                    
+                })
+                .catch(err => {
+                    console.error('Follow error:', err);
+                    
+                });
             }
 
             // Share functionality

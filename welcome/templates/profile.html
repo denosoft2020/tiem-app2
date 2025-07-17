@@ -374,7 +374,7 @@
                             </ul>
                         </div>
                     {% else %}
-                        <button class="btn btn-primary" id="followBtn" data-user-id="{{ user.id }}">
+                        <button class="btn btn-primary" id="followBtn" data-user-id="{{ user.id }}" data-username="{{ user.username }}" data-following="{{ is_following|yesno:'true,false' }}">
                             {% if is_following %}Following{% else %}Follow{% endif %}
                         </button>
                         <button class="btn btn-outline" id="messageBtn" data-user-id="{{ user.id }}" data-username="{{ user.username }}">
@@ -498,6 +498,14 @@
                         console.error('Follow error:', error);
                         showToast('Failed to follow user');
                     }
+
+                    if (data.status === 'followed') {
+                        this.textContent = 'Following';
+                        this.dataset.following = 'true';  // Add this line
+                    } else if (data.status === 'unfollowed') {
+                        this.textContent = 'Follow';
+                        this.dataset.following = 'false';  // Add this line
+                    }
                 });
             }
 
@@ -572,8 +580,11 @@
                     const userId = this.dataset.userId;
                     const username = this.dataset.username;
                     
+                    // Get the current follow button
+                    const followBtn = document.getElementById('followBtn');
+
                     // Check if we're already following this user
-                    const isFollowing = followBtn ? followBtn.textContent === 'Following' : false;
+                    const isFollowing = followBtn && followBtn.dataset.following === 'true';
                     
                     if (!isFollowing) {
                         // Show warning that you need to follow first

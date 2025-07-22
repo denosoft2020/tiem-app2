@@ -95,6 +95,20 @@ def signin(request):
 
     return render(request, "sign-in.html")
 
+@csrf_exempt
+def api_login(request):
+    if request.method == "POST":
+        data = json.loads(request.body)
+        username = data.get('username')
+        password = data.get('password')
+
+        user = authenticate(username=username, password=password)
+        if user:
+            return JsonResponse({'message': 'Login successful'})
+        else:
+            return JsonResponse({'error': 'Invalid credentials'}, status=400)
+    return JsonResponse({'error': 'Invalid method'}, status=405)
+
 def terms_and_conditions(request):
     return render(request, 'terms.html')
 

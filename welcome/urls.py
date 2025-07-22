@@ -21,6 +21,7 @@ urlpatterns = [
     path('', views.welcome),
     path('signin/', views.signin, name='signin'),
     path('terms/', views.terms_and_conditions, name='terms'),
+    path('api/login/', views.api_login, name='api-login'),
     path('login/', LoginView.as_view(template_name='log-in.html'), name='login'),
     path('forgot_password/', views.forgot_password, name = 'forgot_password'),
     path('feed/', views.feed, name='feed'),

@@ -1,0 +1,69 @@
+body {
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: #f4f4f4;
+    margin: 0;
+}
+
+.container {
+    text-align: center;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.logo {
+    width: 80px;
+    margin-bottom: 20px;
+}
+
+
+.auth-buttons button, .create-account-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.google-btn {
+    background-color: #db4437;
+    color: white;
+}
+
+.facebook-btn {
+    background-color: #4267B2;
+    color: white;
+}
+
+.create-account-btn {
+    background-color: #28a745;
+    color: white;
+    font-weight: bold;
+}
+
+.create-account-btn:hover {
+    background-color: #218838;
+}
+
+.auth-buttons img {
+    width: 20px;
+    margin-right: 15px;
+}
+
+.sign-in-link {
+    display: block;
+    margin-top: 15px;
+    text-decoration: none;
+    color: #007BFF;
+}

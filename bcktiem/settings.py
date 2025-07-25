@@ -27,8 +27,8 @@ SECRET_KEY = 'django-insecure-03r@#3+qld7&+7vqdj&ndlxe3p6%6vvpn49%f$eu7&jgj%ho@u
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['*']
-CSRF_TRUSTED_ORIGINS = ['https://2f3fd12ca7af.ngrok-free.app']
+ALLOWED_HOSTS = ['*', '13.49.137.134']
+CSRF_TRUSTED_ORIGINS = []
 
 
 
@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'welcome',
     'corsheaders',
     'channels',
+    'django_resized',
 ]
 
 REST_FRAMEWORK = {
@@ -186,3 +187,5 @@ CACHES = {
         'LOCATION': 'unique-snowflake',
     }
 }
+
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')

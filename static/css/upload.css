@@ -1,0 +1,209 @@
+/* Upload Page Styles */
+.upload-container {
+    max-width: 600px;
+    margin: 0 auto;
+    background: #fff;
+    min-height: 100vh;
+}
+
+.upload-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    border-bottom: 1px solid #dbdbdb;
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 10;
+}
+
+.upload-header h2 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.back-btn {
+    color: #262626;
+    font-size: 18px;
+    text-decoration: none;
+}
+
+.share-btn {
+    background: none;
+    border: none;
+    color: #0095f6;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.upload-options {
+    display: flex;
+    gap: 15px;
+    padding: 20px;
+}
+
+.option-card {
+    flex: 1;
+    padding: 20px;
+    border: 2px dashed #dbdbdb;
+    border-radius: 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.option-card:hover {
+    border-color: #0095f6;
+    background: rgba(0, 149, 246, 0.05);
+}
+
+.option-card i {
+    font-size: 30px;
+    color: #0095f6;
+    margin-bottom: 10px;
+}
+
+.option-card h3 {
+    margin: 0 0 5px;
+    font-size: 16px;
+}
+
+.option-card p {
+    margin: 0;
+    font-size: 12px;
+    color: #8e8e8e;
+}
+
+.option-card input[type="file"] {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.preview-container {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 9/16;
+    background: #fafafa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.empty-state {
+    text-align: center;
+    color: #8e8e8e;
+}
+
+.empty-state i {
+    font-size: 50px;
+    margin-bottom: 10px;
+}
+
+.preview-media {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: #000;
+}
+
+.form-section {
+    padding: 15px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.form-group textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #dbdbdb;
+    border-radius: 5px;
+    resize: none;
+    min-height: 100px;
+}
+
+.form-row {
+    display: flex;
+    gap: 15px;
+}
+
+.form-row .form-group {
+    flex: 1;
+}
+
+.form-group select, 
+.form-group input[type="number"] {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #dbdbdb;
+    border-radius: 5px;
+}
+
+/* Media controls */
+.media-controls {
+    position: absolute;
+    bottom: 10px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    z-index: 2;
+}
+
+.media-controls button {
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    margin: 0 5px;
+    cursor: pointer;
+}
+
+/* Loading state */
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3;
+    display: none;
+}
+
+.spinner {
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top: 4px solid #fff;
+    width: 30px;
+    height: 30px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
